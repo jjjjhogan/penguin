@@ -1,1 +1,1 @@
-read me
+read me     print(Penguins RULE!!!)
