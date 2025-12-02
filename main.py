@@ -4,6 +4,6 @@ response = input()
 
 langy = response.split()[0]
 
-
+dify = response.split()[1]
 
 
