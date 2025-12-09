@@ -34,3 +34,4 @@ def get_standard_response(system_prompt, user_prompt):
         ]
     )
     return response.choices[0].message.content
+get_standard_response('you are a language tutor','give us 5 vocab words in ' + langy + ' in difficulty ' + dify)
