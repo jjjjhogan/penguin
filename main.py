@@ -1,3 +1,4 @@
+import key
 from openai import OpenAI
 
 
@@ -10,7 +11,7 @@ langy = response.split()[0]
 dify = response.split()[1]
 
 client = OpenAI(
-    api_key = "YOUR_API_KEY_GOES_HERE_IM_NOT_SHARING_MINE"
+    api_key = key.secret.ai
 )
 
 def get_standard_response(system_prompt, user_prompt):
@@ -33,4 +34,3 @@ def get_standard_response(system_prompt, user_prompt):
         ]
     )
     return response.choices[0].message.content
-
