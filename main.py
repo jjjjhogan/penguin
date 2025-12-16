@@ -57,19 +57,27 @@ def get_json_response(system_prompt, user_prompt):
         ]
     )
     return loads(response.choices[0].message.content)
+running = True
+while(running):
+    words = get_standard_response(f'you are a language tutor, return the answer as just a python list of the words as strings','give us 5 vocab words in ' + langy + ' in difficulty ' + dify)
+    questions = (get_json_response("""you are a language tutor, use different answers on each question, and all the correct answers are different numbers [it cant be the number 1 for all of them]. return 5 multiple choice questions you come up with in json format: {'q1':'question 1 text goes here','q1a:['potential answer 1 to question 1 goes here, potential answer 2 to question 1 goes here, ...],'q2':'question 1 text goes here','q2a':['potential answer 1 to question 2 goes here, potential answer 2 to question 2 goes here, ...]}"""
+                                ,'come up with multiple choice questions with 4 answers only one answer being the correct translation. the questions will ask users to translate english words into ' + langy + ' words using this list of words ' +words))
 
-words = get_standard_response(f'you are a language tutor, return the answer as just a python list of the words as strings','give us 5 vocab words in ' + langy + ' in difficulty ' + dify)
-questions = (get_json_response("""you are a language tutor, use different answers on each question, and all the correct answers are different numbers [it cant be the number 1 for all of them]. return 5 multiple choice questions you come up with in json format: {'q1':'question 1 text goes here','q1a:['potential answer 1 to question 1 goes here, potential answer 2 to question 1 goes here, ...],'q2':'question 1 text goes here','q2a':['potential answer 1 to question 2 goes here, potential answer 2 to question 2 goes here, ...]}"""
-                            ,'come up with multiple choice questions with 4 answers only one answer being the correct translation. the questions will ask users to translate english words into ' + langy + ' words using this list of words ' +words))
+    answers = []
+    for e in range(5):
+        print(questions[f'q{e+1}'])
+        for i in range(4):
+            print('#' + str(i+1) + ': ' + questions[f'q{e+1}a'][i])
+        answers.append(input('What is the correct translation (1-4)'))
 
-answers = []
-for e in range(5):
-    print(questions[f'q{e+1}'])
-    for i in range(4):
-        print('#' + str(i+1) + ': ' + questions[f'q{e+1}a'][i])
-    answers.append(input('What is the correct translation (1-4)'))
+    print(answers)
 
-print(answers)
+    print(get_standard_response("You are a language tutor, can you tell me if the answers I got are right? The questions are provided in dictinory format with the first question being under key q1 and the answers being unedr q1a. At the end will be a list of all the answers I chosse.",
+                        str(questions) +'questions are done, here is list of answers ' + str(answers)))
+    print("Do you want to go again?")
+    go_again = input('Yes/No: ')
 
-print(get_standard_response("You are a language tutor, can you tell me if the answers I got are right? The questions are provided in dictinory format with the first question being under key q1 and the answers being unedr q1a. At the end will be a list of all the answers I chosse.",
-                      str(questions) +'questions are done, here is list of answers ' + str(answers)))
+    if go_again.lower()=='yes':
+        running = True
+    else:
+        running = False
