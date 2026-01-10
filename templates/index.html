@@ -26,11 +26,17 @@
 
 <div id="quiz"></div>
 
+<hr>
+
+<div id="result"></div>
+
 <script>
 let storedQuestions = {};
 let answers = [];
 
 function start() {
+    document.getElementById("result").innerText = "";
+
     fetch("/start", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -42,13 +48,15 @@ function start() {
     .then(res => res.json())
     .then(data => {
         if (data.error) {
-            alert(data.error);
+            document.getElementById("result").innerText = data.error;
             return;
         }
         storedQuestions = data.questions;
         showQuestions();
     })
-    .catch(err => alert("Request failed: " + err));
+    .catch(err => {
+        document.getElementById("result").innerText = "Request failed: " + err;
+    });
 }
 
 function showQuestions() {
@@ -88,12 +96,14 @@ function submitAnswers() {
     .then(res => res.json())
     .then(data => {
         if (data.error) {
-            alert(data.error);
+            document.getElementById("result").innerText = data.error;
             return;
         }
-        alert(data.result);
+        document.getElementById("result").innerText = data.result;
     })
-    .catch(err => alert("Submission failed: " + err));
+    .catch(err => {
+        document.getElementById("result").innerText = "Submission failed: " + err;
+    });
 }
 </script>
 
