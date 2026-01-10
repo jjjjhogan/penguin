@@ -12,6 +12,8 @@ client = OpenAI(
     api_key=getenv("api_key")
 )
 
+ALLOWED_DIFFICULTIES = ["Easy", "Medium", "Hard", "Impossible", "No Brainer"]
+
 def get_standard_response(system_prompt, user_prompt):
     try:
         response = client.chat.completions.create(
@@ -52,6 +54,9 @@ def start():
 
         langy = data["language"]
         dify = data["difficulty"]
+
+        if dify not in ALLOWED_DIFFICULTIES:
+            return jsonify({"error": "Invalid difficulty selected"}), 400
 
         words = get_standard_response(
             "you are a language tutor, return the answer as just a python list of the words as strings",
