@@ -1,126 +1,9 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Penguin Language App</title>
-</head>
-<body>
-
-<h2>Penguin Language App</h2>
-
-<label>Language:</label>
-<input id="language" />
-<br><br>
-
-<label>Difficulty:</label>
-<select id="difficulty">
-    <option value="No Brainer">No Brainer</option>
-    <option value="Easy">Easy</option>
-    <option value="Medium">Medium</option>
-    <option value="Hard">Hard</option>
-    <option value="Impossible">Impossible</option>
-</select>
-<br><br>
-
-<button onclick="start()">Start</button>
-<button onclick="restartApp()">Restart</button>
-
-<div id="loading" style="display:none;">
-    <p>Loading questions...</p>
-</div>
-
-<div id="quiz"></div>
-
-<hr>
-
-<div id="result"></div>
-
-<script>
+<<script>
 let storedQuestions = {};
 let answers = [];
 let correctCount = 0;
 
 const difficultyOrder = ["No Brainer", "Easy", "Medium", "Hard", "Impossible"];
-
-function start() {
-    document.getElementById("result").innerText = "";
-    document.getElementById("quiz").innerHTML = "";
-    document.getElementById("loading").style.display = "block";
-
-    fetch("/start", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            language: document.getElementById("language").value,
-            difficulty: document.getElementById("difficulty").value
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        document.getElementById("loading").style.display = "none";
-
-        if (data.error) {
-            document.getElementById("result").innerText = data.error;
-            return;
-        }
-
-        storedQuestions = data.questions;
-        showQuestions();
-    })
-    .catch(err => {
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("result").innerText = "Request failed: " + err;
-    });
-}
-
-function showQuestions() {
-    let html = "";
-    for (let i = 1; i <= 5; i++) {
-        if (!storedQuestions["q" + i]) continue;
-
-        html += `<p>${storedQuestions["q" + i]}</p>`;
-        storedQuestions["q" + i + "a"].forEach((a, idx) => {
-            html += `
-                <label>
-                    <input type="radio" name="q${i}" value="${idx + 1}">
-                    ${idx + 1}: ${a}
-                </label><br>
-            `;
-        });
-    }
-    html += `<br><button onclick="submitAnswers()">Submit</button>`;
-    document.getElementById("quiz").innerHTML = html;
-}
-
-function submitAnswers() {
-    answers = [];
-    for (let i = 1; i <= 5; i++) {
-        let selected = document.querySelector(`input[name="q${i}"]:checked`);
-        answers.push(selected ? selected.value : null);
-    }
-
-    fetch("/submit", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            questions: storedQuestions,
-            answers: answers
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.error) {
-            document.getElementById("result").innerText = data.error;
-            return;
-        }
-
-        document.getElementById("result").innerText = data.result;
-        correctCount = (data.result.match(/correct/gi) || []).length;
-    })
-    .catch(err => {
-        document.getElementById("result").innerText = "Submission failed: " + err;
-    });
-}
 
 function restartApp() {
     let difficultySelect = document.getElementById("difficulty");
@@ -129,7 +12,8 @@ function restartApp() {
 
     if (correctCount <= 1 && index > 0) {
         index -= 1;
-    } else if ((correctCount === 3 || correctCount === 5) && index < difficultyOrder.length - 1) {
+    } 
+    else if (correctCount >= 4 && index < difficultyOrder.length - 1) {
         index += 1;
     }
 
@@ -144,6 +28,3 @@ function restartApp() {
     document.getElementById("loading").style.display = "none";
 }
 </script>
-
-</body>
-</html>
