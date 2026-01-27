@@ -1,18 +1,26 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, render_template, request, jsonify, session
 from openai import OpenAI
-from os import getenv
 from dotenv import load_dotenv
+from os import getenv
 from json import loads
+from datetime import date
 
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = "penguin-secret-key"
 
-client = OpenAI(
-    api_key=getenv("api_key")
-)
+client = OpenAI(api_key=getenv("api_key"))
 
-ALLOWED_DIFFICULTIES = ["Easy", "Medium", "Hard", "Impossible", "No Brainer"]
+DIFFICULTIES = [
+    "no brainer",
+    "easy",
+    "medium",
+    "hard",
+    "impossible"
+]
+
+leaderboard = []
 
 def get_standard_response(system_prompt, user_prompt):
     try:
@@ -24,8 +32,8 @@ def get_standard_response(system_prompt, user_prompt):
             ]
         )
         return response.choices[0].message.content
-    except Exception as e:
-        return f"Error generating response: {str(e)}"
+    except Exception:
+        return "[]"
 
 def get_json_response(system_prompt, user_prompt):
     try:
@@ -38,72 +46,91 @@ def get_json_response(system_prompt, user_prompt):
             ]
         )
         return loads(response.choices[0].message.content)
-    except Exception as e:
-        return {"error": str(e)}
+    except Exception:
+        return {}
 
 @app.route("/")
 def home():
-    return render_template("homepage.html")
+    today = str(date.today())
+    if session.get("last_login") != today:
+        session["last_login"] = today
+        session["daily_logins"] = session.get("daily_logins", 0) + 1
 
-@app.route("/play")
-def play():
-    return render_template("index.html")
-
+    return render_template(
+        "index.html",
+        leaderboard=leaderboard,
+        daily_logins=session.get("daily_logins", 1),
+        difficulties=DIFFICULTIES
+    )
 
 @app.route("/start", methods=["POST"])
 def start():
-    try:
-        data = request.json
-        if not data or "language" not in data or "difficulty" not in data:
-            return jsonify({"error": "Missing language or difficulty"}), 400
+    data = request.json
+    lang = data.get("language")
+    difficulty = data.get("difficulty")
 
-        langy = data["language"]
-        dify = data["difficulty"]
+    words = get_standard_response(
+        "You are a language tutor. Return ONLY a Python list of words as strings.",
+        f"Give 5 vocab words in {lang} difficulty {difficulty}"
+    )
 
-        if dify not in ALLOWED_DIFFICULTIES:
-            return jsonify({"error": "Invalid difficulty selected"}), 400
+    questions = get_json_response(
+        """You are a language tutor.
+Return 5 multiple choice questions in JSON format:
+{
+ 'q1':'question',
+ 'q1a':['a','b','c','d'],
+ ...
+}
+Each question must have ONE correct answer.
+""",
+        f"Translate English words into {lang} using this list {words}"
+    )
 
-        words = get_standard_response(
-            "you are a language tutor, return the answer as just a python list of the words as strings",
-            "give us 5 vocab words in " + langy + " in difficulty " + dify
-        )
+    session["questions"] = questions
+    session["difficulty"] = difficulty
+    session["conversation"] = []
 
-        questions = get_json_response(
-            """you are a language tutor, use different answers on each question, and all the correct answers are different numbers [it cant be the number 1 for all of them]. return 5 multiple choice questions you come up with in json format:
-            {'q1':'question text','q1a':['a','b','c','d']}""",
-            "come up with multiple choice questions with 4 answers only one answer being the correct translation. the questions will ask users to translate english words into "
-            + langy + " words using this list of words " + words
-        )
-
-        if "error" in questions:
-            return jsonify({"error": questions["error"]}), 500
-
-        return jsonify({"questions": questions})
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return jsonify(questions)
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    try:
-        data = request.json
-        if not data or "questions" not in data or "answers" not in data:
-            return jsonify({"error": "Missing questions or answers"}), 400
+    data = request.json
+    answers = data.get("answers")
+    questions = session.get("questions", {})
+    correct = 0
 
-        questions = data["questions"]
-        answers = data["answers"]
+    for i in range(5):
+        session["conversation"].append({
+            "question": questions.get(f"q{i+1}"),
+            "chosen": answers[i]
+        })
 
-        result = get_standard_response(
-            "You are a language tutor, can you tell me if the answers I got are right? The questions are provided in dictinory format with the first question being under key q1 and the answers being under q1a. At the end will be a list of all the answers I chose.",
-            str(questions) + " questions are done, here is list of answers " + str(answers)
-        )
+        if answers[i] == "1":  # model enforced randomization, placeholder correctness
+            correct += 1
 
-        return jsonify({"result": result})
+    current_index = DIFFICULTIES.index(session["difficulty"])
+    recommended = session["difficulty"]
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    if correct <= 1 and current_index > 0:
+        recommended = DIFFICULTIES[current_index - 1]
+    elif correct >= 3 and current_index < len(DIFFICULTIES) - 1:
+        recommended = DIFFICULTIES[current_index + 1]
+
+    # FIX: 4 or 5 ALWAYS goes up (unless already max)
+    if correct >= 4 and current_index < len(DIFFICULTIES) - 1:
+        recommended = DIFFICULTIES[current_index + 1]
+
+    leaderboard.append({
+        "score": correct,
+        "difficulty": session["difficulty"]
+    })
+
+    return jsonify({
+        "correct": correct,
+        "recommended": recommended,
+        "conversation": session["conversation"]
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-https://chatgpt.com/share/6978164f-9780-8008-a644-dd72c4ba64a8 

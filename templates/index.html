@@ -1,150 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>Penguin Language App</title>
+    <title>🐧 Penguin Language App</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .hidden { display: none; }
+        .loader { font-size: 18px; }
+    </style>
 </head>
 <body>
 
-<h2>🐧 Penguin Language App</h2>
+<h1>🐧 Penguin Language Learning App</h1>
 
-<label>Language:</label>
-<input id="language" />
-<br><br>
+<h3>How to Play</h3>
+<p>
+1. Choose a language and difficulty.<br>
+2. Answer 5 questions.<br>
+3. See answers and recommendations.<br>
+4. Restart to improve and level up!
+</p>
 
-<label>Difficulty:</label>
-<select id="difficulty">
-    <option value="No Brainer">No Brainer</option>
-    <option value="Easy">Easy</option>
-    <option value="Medium">Medium</option>
-    <option value="Hard">Hard</option>
-    <option value="Impossible">Impossible</option>
-</select>
-<br><br>
-
-<button onclick="start()">Start</button>
-<button onclick="restartApp()">Restart</button>
-
-<div id="loading" style="display:none;">
-    <p>Loading questions...</p>
-</div>
-
-<div id="quiz"></div>
+<p><b>Daily Visits:</b> {{ daily_logins }}</p>
 
 <hr>
 
-<div id="result"></div>
+<label>Language:</label>
+<input id="language" placeholder="Spanish"><br><br>
+
+<label>Difficulty:</label>
+<select id="difficulty">
+    {% for d in difficulties %}
+    <option value="{{ d }}">{{ d }}</option>
+    {% endfor %}
+</select><br><br>
+
+<button onclick="start()">Start</button>
+
+<div id="loader" class="loader hidden">⏳ Loading questions...</div>
+
+<div id="quiz"></div>
+
+<button id="restart" class="hidden" onclick="location.reload()">Restart</button>
+
+<h3>Conversation Log</h3>
+<div id="conversation"></div>
+
+<h3>Leaderboard</h3>
+<ul>
+    {% for entry in leaderboard %}
+    <li>{{ entry.score }}/5 — {{ entry.difficulty }}</li>
+    {% endfor %}
+</ul>
 
 <script>
-let storedQuestions = {};
 let answers = [];
-let correctCount = 0;
-
-const difficultyOrder = ["No Brainer", "Easy", "Medium", "Hard", "Impossible"];
 
 function start() {
-    document.getElementById("result").innerText = "";
-    document.getElementById("quiz").innerHTML = "";
-    document.getElementById("loading").style.display = "block";
+    document.getElementById("loader").classList.remove("hidden");
 
     fetch("/start", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            language: document.getElementById("language").value,
-            difficulty: document.getElementById("difficulty").value
+            language: language.value,
+            difficulty: difficulty.value
         })
     })
-    .then(res => res.json())
+    .then(r => r.json())
     .then(data => {
-        document.getElementById("loading").style.display = "none";
-
-        if (data.error) {
-            document.getElementById("result").innerText = data.error;
-            return;
-        }
-
-        storedQuestions = data.questions;
-        showQuestions();
-    })
-    .catch(err => {
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("result").innerText = "Request failed: " + err;
+        document.getElementById("loader").classList.add("hidden");
+        showQuiz(data);
     });
 }
 
-function showQuestions() {
+function showQuiz(qs) {
     let html = "";
     for (let i = 1; i <= 5; i++) {
-        if (!storedQuestions["q" + i]) continue;
-
-        html += `<p>${storedQuestions["q" + i]}</p>`;
-        storedQuestions["q" + i + "a"].forEach((a, idx) => {
-            html += `
-                <label>
-                    <input type="radio" name="q${i}" value="${idx + 1}">
-                    ${idx + 1}: ${a}
-                </label><br>
-            `;
+        html += `<p>${qs["q"+i]}</p>`;
+        qs["q"+i+"a"].forEach((a, idx) => {
+            html += `<button onclick="answers[${i-1}]='${idx+1}'">${idx+1}: ${a}</button><br>`;
         });
     }
-    html += `<br><button onclick="submitAnswers()">Submit</button>`;
-    document.getElementById("quiz").innerHTML = html;
+    html += `<br><button onclick="submit()">Submit</button>`;
+    quiz.innerHTML = html;
 }
 
-function submitAnswers() {
-    answers = [];
-    for (let i = 1; i <= 5; i++) {
-        let selected = document.querySelector(`input[name="q${i}"]:checked`);
-        answers.push(selected ? selected.value : null);
-    }
-
+function submit() {
     fetch("/submit", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            questions: storedQuestions,
-            answers: answers
-        })
+        body: JSON.stringify({answers})
     })
-    .then(res => res.json())
+    .then(r => r.json())
     .then(data => {
-        if (data.error) {
-            document.getElementById("result").innerText = data.error;
-            return;
-        }
+        quiz.innerHTML += `<p><b>Correct:</b> ${data.correct}/5</p>`;
+        quiz.innerHTML += `<p><b>Recommended Difficulty:</b> ${data.recommended}</p>`;
+        restart.classList.remove("hidden");
 
-        document.getElementById("result").innerText = data.result;
-
-        // Count correct answers (simple heuristic)
-        correctCount = (data.result.match(/correct/gi) || []).length;
-    })
-    .catch(err => {
-        document.getElementById("result").innerText = "Submission failed: " + err;
+        data.conversation.forEach(c => {
+            conversation.innerHTML += `<p>${c.question} — You chose ${c.chosen}</p>`;
+        });
     });
-}
-
-function restartApp() {
-    let difficultySelect = document.getElementById("difficulty");
-    let currentDifficulty = difficultySelect.value;
-    let index = difficultyOrder.indexOf(currentDifficulty);
-
-    if (correctCount <= 1 && index > 0) {
-        index -= 1;
-    } 
-    else if (correctCount >= 4 && index < difficultyOrder.length - 1) {
-        index += 1;
-    }
-
-    difficultySelect.value = difficultyOrder[index];
-
-    storedQuestions = {};
-    answers = [];
-    correctCount = 0;
-
-    document.getElementById("quiz").innerHTML = "";
-    document.getElementById("result").innerText = "";
-    document.getElementById("loading").style.display = "none";
 }
 </script>
 
