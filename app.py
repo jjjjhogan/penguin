@@ -42,8 +42,13 @@ def get_json_response(system_prompt, user_prompt):
         return {"error": str(e)}
 
 @app.route("/")
-def index():
+def home():
+    return render_template("homepage.html")
+
+@app.route("/play")
+def play():
     return render_template("index.html")
+
 
 @app.route("/start", methods=["POST"])
 def start():
@@ -100,3 +105,5 @@ def submit():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+https://chatgpt.com/share/6978164f-9780-8008-a644-dd72c4ba64a8 
