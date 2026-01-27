@@ -1,62 +1,42 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>🐧 Penguin Language App</title>
-    <style>
-        body { font-family: Arial; padding: 20px; }
-        .hidden { display: none; }
-        .loader { font-size: 18px; }
-    </style>
+    <title>Play</title>
 </head>
 <body>
 
-<h1>🐧 Penguin Language Learning App</h1>
+<h2>Welcome, {{ username }}!</h2>
 
-<h3>How to Play</h3>
-<p>
-1. Choose a language and difficulty.<br>
-2. Answer 5 questions.<br>
-3. See answers and recommendations.<br>
-4. Restart to improve and level up!
-</p>
-
-<p><b>Daily Visits:</b> {{ daily_logins }}</p>
+<a href="/leaderboard">Leaderboard</a> |
+<a href="/logout">Logout</a>
 
 <hr>
 
 <label>Language:</label>
-<input id="language" placeholder="Spanish"><br><br>
+<input id="language" value="Spanish"><br><br>
 
 <label>Difficulty:</label>
 <select id="difficulty">
     {% for d in difficulties %}
     <option value="{{ d }}">{{ d }}</option>
     {% endfor %}
-</select><br><br>
+</select>
+
+<br><br>
 
 <button onclick="start()">Start</button>
 
-<div id="loader" class="loader hidden">⏳ Loading questions...</div>
-
+<div id="loading" style="display:none;">Loading questions...</div>
 <div id="quiz"></div>
-
-<button id="restart" class="hidden" onclick="location.reload()">Restart</button>
-
-<h3>Conversation Log</h3>
-<div id="conversation"></div>
-
-<h3>Leaderboard</h3>
-<ul>
-    {% for entry in leaderboard %}
-    <li>{{ entry.score }}/5 — {{ entry.difficulty }}</li>
-    {% endfor %}
-</ul>
+<div id="result"></div>
 
 <script>
 let answers = [];
 
 function start() {
-    document.getElementById("loader").classList.remove("hidden");
+    document.getElementById("loading").style.display = "block";
+    document.getElementById("quiz").innerHTML = "";
+    document.getElementById("result").innerText = "";
 
     fetch("/start", {
         method: "POST",
@@ -67,9 +47,9 @@ function start() {
         })
     })
     .then(r => r.json())
-    .then(data => {
-        document.getElementById("loader").classList.add("hidden");
-        showQuiz(data);
+    .then(qs => {
+        document.getElementById("loading").style.display = "none";
+        showQuiz(qs);
     });
 }
 
@@ -81,11 +61,11 @@ function showQuiz(qs) {
             html += `<button onclick="answers[${i-1}]='${idx+1}'">${idx+1}: ${a}</button><br>`;
         });
     }
-    html += `<br><button onclick="submit()">Submit</button>`;
+    html += `<br><button onclick="submitAnswers()">Submit</button>`;
     quiz.innerHTML = html;
 }
 
-function submit() {
+function submitAnswers() {
     fetch("/submit", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
@@ -93,13 +73,11 @@ function submit() {
     })
     .then(r => r.json())
     .then(data => {
-        quiz.innerHTML += `<p><b>Correct:</b> ${data.correct}/5</p>`;
-        quiz.innerHTML += `<p><b>Recommended Difficulty:</b> ${data.recommended}</p>`;
-        restart.classList.remove("hidden");
-
-        data.conversation.forEach(c => {
-            conversation.innerHTML += `<p>${c.question} — You chose ${c.chosen}</p>`;
-        });
+        result.innerHTML = `
+            <p><b>Score:</b> ${data.correct}/5</p>
+            <p><b>Recommended Difficulty:</b> ${data.recommended}</p>
+            <p><a href="/leaderboard">View Leaderboard</a></p>
+        `;
     });
 }
 </script>
