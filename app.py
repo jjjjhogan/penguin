@@ -17,6 +17,9 @@ DIFFICULTIES = ["no brainer", "easy", "medium", "hard", "impossible"]
 # In-memory leaderboard (resets if server restarts)
 leaderboard = []
 
+# In-memory XP store: { "username": xp_int }
+user_xp = {}
+
 
 def get_standard_response(system_prompt, user_prompt):
     try:
@@ -45,6 +48,16 @@ def get_json_response(system_prompt, user_prompt):
         return loads(response.choices[0].message.content)
     except Exception:
         return {}
+    
+
+def get_level_from_xp(xp):
+    # Level starts at 1
+    return (xp // 20) + 1
+
+
+def get_xp_into_level(xp):
+    # how much xp into current level
+    return xp % 20
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -57,6 +70,11 @@ def login():
         username = request.form.get("username", "").strip()
         if username:
             session["username"] = username
+
+            # initialize xp if new user
+            if username not in user_xp:
+                user_xp[username] = 0
+
             return redirect("/")
 
     return render_template("login.html")
@@ -74,18 +92,27 @@ def home():
     if not session.get("username"):
         return redirect("/login")
 
+    username = session.get("username")
+
     # daily open counter (per user session)
     today = str(date.today())
     if session.get("last_login") != today:
         session["last_login"] = today
         session["daily_logins"] = session.get("daily_logins", 0) + 1
 
+    xp = user_xp.get(username, 0)
+    level = get_level_from_xp(xp)
+    xp_into_level = get_xp_into_level(xp)
+
     return render_template(
         "index.html",
         leaderboard=leaderboard,
         daily_logins=session.get("daily_logins", 1),
         difficulties=DIFFICULTIES,
-        username=session.get("username")
+        username=username,
+        xp=xp,
+        level=level,
+        xp_into_level=xp_into_level
     )
 
 
@@ -108,7 +135,6 @@ def start():
         f"Give 5 vocab words in {lang} difficulty {difficulty}"
     )
 
-    # Force correct answers to be included (q1c..q5c)
     questions = get_json_response(
         """You are a language tutor.
 
@@ -161,6 +187,8 @@ def submit():
     if not session.get("username"):
         return jsonify({"error": "Not logged in"}), 401
 
+    username = session.get("username")
+
     data = request.json
     answers = data.get("answers", [])
     questions = session.get("questions", {})
@@ -182,6 +210,13 @@ def submit():
         if chosen is not None and str(chosen) == str(correct_option):
             correct += 1
 
+    # XP SYSTEM: 1 XP per correct answer
+    user_xp[username] = user_xp.get(username, 0) + correct
+
+    xp = user_xp[username]
+    level = get_level_from_xp(xp)
+    xp_into_level = get_xp_into_level(xp)
+
     # recommend difficulty
     current_index = DIFFICULTIES.index(session["difficulty"])
     recommended = session["difficulty"]
@@ -192,7 +227,7 @@ def submit():
         recommended = DIFFICULTIES[current_index + 1]
 
     leaderboard.append({
-        "user": session.get("username"),
+        "user": username,
         "score": correct,
         "difficulty": session.get("difficulty"),
         "language": session.get("language")
@@ -201,7 +236,10 @@ def submit():
     return jsonify({
         "correct": correct,
         "recommended": recommended,
-        "conversation": session["conversation"]
+        "conversation": session["conversation"],
+        "xp": xp,
+        "level": level,
+        "xp_into_level": xp_into_level
     })
 
 

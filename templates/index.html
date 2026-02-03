@@ -22,6 +22,12 @@
   <a href="/logout">Logout</a>
 </p>
 
+<p>
+  <b>Level:</b> {{ level }} |
+  <b>XP:</b> {{ xp }} |
+  <b>Progress:</b> {{ xp_into_level }}/20
+</p>
+
 <h3>How to Play</h3>
 <p>
 1. Choose a language and difficulty.<br>
@@ -101,12 +107,10 @@ function start() {
 function selectAnswer(questionIndex, answerNumber) {
     answers[questionIndex] = String(answerNumber);
 
-    // remove highlight from all buttons for this question
     document.querySelectorAll(`.q${questionIndex}-btn`).forEach(btn => {
         btn.classList.remove("selected");
     });
 
-    // highlight clicked
     const clicked = document.getElementById(`q${questionIndex}-a${answerNumber}`);
     if (clicked) clicked.classList.add("selected");
 }
@@ -143,6 +147,8 @@ function submit() {
     .then(data => {
         quiz.innerHTML += `<p><b>Correct:</b> ${data.correct}/5</p>`;
         quiz.innerHTML += `<p><b>Recommended Difficulty:</b> ${data.recommended}</p>`;
+        quiz.innerHTML += `<p><b>XP:</b> ${data.xp} | <b>Level:</b> ${data.level} | <b>Progress:</b> ${data.xp_into_level}/20</p>`;
+
         restart.classList.remove("hidden");
 
         conversation.innerHTML = "";
