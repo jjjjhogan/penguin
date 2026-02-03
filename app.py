@@ -14,6 +14,7 @@ client = OpenAI(api_key=getenv("api_key"))
 
 DIFFICULTIES = ["no brainer", "easy", "medium", "hard", "impossible"]
 
+# In-memory leaderboard (resets if server restarts)
 leaderboard = []
 
 
@@ -48,7 +49,7 @@ def get_json_response(system_prompt, user_prompt):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # If already logged in, go home
+    # already logged in
     if session.get("username"):
         return redirect("/")
 
@@ -73,6 +74,7 @@ def home():
     if not session.get("username"):
         return redirect("/login")
 
+    # daily open counter (per user session)
     today = str(date.today())
     if session.get("last_login") != today:
         session["last_login"] = today
@@ -93,10 +95,12 @@ def start():
         return jsonify({"error": "Not logged in"}), 401
 
     data = request.json
-    lang = data.get("language")
-    difficulty = data.get("difficulty")
+    lang = data.get("language", "").strip()
+    difficulty = data.get("difficulty", "").strip()
 
-    # store current language so we can put it on leaderboard
+    if not lang or not difficulty:
+        return jsonify({"error": "Language and difficulty are required."}), 400
+
     session["language"] = lang
 
     words = get_standard_response(
@@ -104,6 +108,7 @@ def start():
         f"Give 5 vocab words in {lang} difficulty {difficulty}"
     )
 
+    # Force correct answers to be included (q1c..q5c)
     questions = get_json_response(
         """You are a language tutor.
 
@@ -139,6 +144,7 @@ Rules:
         f"The questions will ask users to translate English words into {lang} words using this list of words {words}."
     )
 
+    # basic validation
     for i in range(1, 6):
         if f"q{i}" not in questions or f"q{i}a" not in questions or f"q{i}c" not in questions:
             return jsonify({"error": "Question generation failed. Please try again."}), 500
@@ -169,13 +175,14 @@ def submit():
 
         session["conversation"].append({
             "question": questions.get(q_key),
-            "chosen": chosen,
+            "chosen": chosen if chosen is not None else "Nothing was chosen",
             "correct": str(correct_option)
         })
 
         if chosen is not None and str(chosen) == str(correct_option):
             correct += 1
 
+    # recommend difficulty
     current_index = DIFFICULTIES.index(session["difficulty"])
     recommended = session["difficulty"]
 
@@ -184,7 +191,6 @@ def submit():
     elif correct >= 4 and current_index < len(DIFFICULTIES) - 1:
         recommended = DIFFICULTIES[current_index + 1]
 
-    # Leaderboard now includes language + username
     leaderboard.append({
         "user": session.get("username"),
         "score": correct,

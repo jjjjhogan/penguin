@@ -5,8 +5,12 @@
     <style>
         body { font-family: Arial; padding: 20px; }
         .hidden { display: none; }
-        .loader { font-size: 18px; }
-        button { margin: 2px 0; }
+        .loader { font-size: 18px; margin-top: 10px; }
+        button { margin: 2px 0; padding: 6px 10px; }
+        .selected {
+            border: 2px solid black;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -14,7 +18,7 @@
 <h1>🐧 Penguin Language Learning App</h1>
 
 <p>
-  Logged in as: <b>{{ username }}</b>
+  Logged in as: <b>{{ username }}</b> |
   <a href="/logout">Logout</a>
 </p>
 
@@ -94,12 +98,34 @@ function start() {
     });
 }
 
+function selectAnswer(questionIndex, answerNumber) {
+    answers[questionIndex] = String(answerNumber);
+
+    // remove highlight from all buttons for this question
+    document.querySelectorAll(`.q${questionIndex}-btn`).forEach(btn => {
+        btn.classList.remove("selected");
+    });
+
+    // highlight clicked
+    const clicked = document.getElementById(`q${questionIndex}-a${answerNumber}`);
+    if (clicked) clicked.classList.add("selected");
+}
+
 function showQuiz(qs) {
     let html = "";
     for (let i = 1; i <= 5; i++) {
         html += `<p><b>${qs["q"+i]}</b></p>`;
         qs["q"+i+"a"].forEach((a, idx) => {
-            html += `<button onclick="answers[${i-1}]='${idx+1}'">${idx+1}: ${a}</button><br>`;
+            const ansNum = idx + 1;
+            html += `
+                <button
+                    id="q${i-1}-a${ansNum}"
+                    class="q${i-1}-btn"
+                    onclick="selectAnswer(${i-1}, ${ansNum})"
+                >
+                    ${ansNum}: ${a}
+                </button><br>
+            `;
         });
         html += "<br>";
     }
