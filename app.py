@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, redirect
 from openai import OpenAI
 from dotenv import load_dotenv
 from os import getenv
@@ -46,8 +46,33 @@ def get_json_response(system_prompt, user_prompt):
         return {}
 
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    # If already logged in, go home
+    if session.get("username"):
+        return redirect("/")
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        if username:
+            session["username"] = username
+            return redirect("/")
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+
 @app.route("/")
 def home():
+    # must be logged in
+    if not session.get("username"):
+        return redirect("/login")
+
     today = str(date.today())
     if session.get("last_login") != today:
         session["last_login"] = today
@@ -57,23 +82,28 @@ def home():
         "index.html",
         leaderboard=leaderboard,
         daily_logins=session.get("daily_logins", 1),
-        difficulties=DIFFICULTIES
+        difficulties=DIFFICULTIES,
+        username=session.get("username")
     )
 
 
 @app.route("/start", methods=["POST"])
 def start():
+    if not session.get("username"):
+        return jsonify({"error": "Not logged in"}), 401
+
     data = request.json
     lang = data.get("language")
     difficulty = data.get("difficulty")
+
+    # store current language so we can put it on leaderboard
+    session["language"] = lang
 
     words = get_standard_response(
         "You are a language tutor. Return ONLY a Python list of words as strings.",
         f"Give 5 vocab words in {lang} difficulty {difficulty}"
     )
 
-    # IMPORTANT FIX:
-    # We force the model to include correct answer keys: q1c..q5c
     questions = get_json_response(
         """You are a language tutor.
 
@@ -109,7 +139,6 @@ Rules:
         f"The questions will ask users to translate English words into {lang} words using this list of words {words}."
     )
 
-    # basic validation fallback (still minimal)
     for i in range(1, 6):
         if f"q{i}" not in questions or f"q{i}a" not in questions or f"q{i}c" not in questions:
             return jsonify({"error": "Question generation failed. Please try again."}), 500
@@ -123,12 +152,14 @@ Rules:
 
 @app.route("/submit", methods=["POST"])
 def submit():
+    if not session.get("username"):
+        return jsonify({"error": "Not logged in"}), 401
+
     data = request.json
     answers = data.get("answers", [])
     questions = session.get("questions", {})
     correct = 0
 
-    # score correctly using q1c..q5c
     for i in range(5):
         q_key = f"q{i+1}"
         correct_key = f"q{i+1}c"
@@ -136,18 +167,15 @@ def submit():
         chosen = answers[i] if i < len(answers) else None
         correct_option = questions.get(correct_key)
 
-        # store conversation
         session["conversation"].append({
             "question": questions.get(q_key),
             "chosen": chosen,
             "correct": str(correct_option)
         })
 
-        # count correct
         if chosen is not None and str(chosen) == str(correct_option):
             correct += 1
 
-    # difficulty recommendation logic (same as before but fixed)
     current_index = DIFFICULTIES.index(session["difficulty"])
     recommended = session["difficulty"]
 
@@ -156,9 +184,12 @@ def submit():
     elif correct >= 4 and current_index < len(DIFFICULTIES) - 1:
         recommended = DIFFICULTIES[current_index + 1]
 
+    # Leaderboard now includes language + username
     leaderboard.append({
+        "user": session.get("username"),
         "score": correct,
-        "difficulty": session["difficulty"]
+        "difficulty": session.get("difficulty"),
+        "language": session.get("language")
     })
 
     return jsonify({
