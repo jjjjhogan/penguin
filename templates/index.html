@@ -1,23 +1,136 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Login - Penguin App</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    input { padding: 6px; }
-    button { padding: 6px 10px; margin-top: 8px; }
-  </style>
+    <title>🐧 Penguin Language App</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .hidden { display: none; }
+        .loader { font-size: 18px; }
+        button { margin: 2px 0; }
+    </style>
 </head>
 <body>
 
-<h1>🐧 Penguin Language App Login</h1>
-<p>Enter a username (no password).</p>
+<h1>🐧 Penguin Language Learning App</h1>
 
-<form method="POST">
-  <input name="username" placeholder="Username" required />
-  <br>
-  <button type="submit">Login</button>
-</form>
+<p>
+  Logged in as: <b>{{ username }}</b>
+  <a href="/logout">Logout</a>
+</p>
+
+<h3>How to Play</h3>
+<p>
+1. Choose a language and difficulty.<br>
+2. Answer 5 questions.<br>
+3. Submit and see results.<br>
+4. Restart to play again.
+</p>
+
+<p><b>Daily Visits:</b> {{ daily_logins }}</p>
+
+<hr>
+
+<label>Language:</label>
+<input id="language" placeholder="Spanish"><br><br>
+
+<label>Difficulty:</label>
+<select id="difficulty">
+    {% for d in difficulties %}
+    <option value="{{ d }}">{{ d }}</option>
+    {% endfor %}
+</select><br><br>
+
+<button onclick="start()">Start</button>
+
+<div id="loader" class="loader hidden">⏳ Loading questions...</div>
+
+<div id="quiz"></div>
+
+<button id="restart" class="hidden" onclick="location.reload()">Restart</button>
+
+<h3>Conversation Log</h3>
+<div id="conversation"></div>
+
+<h3>Leaderboard</h3>
+<ul>
+    {% for entry in leaderboard %}
+    <li>
+      {{ entry.user }} — {{ entry.score }}/5 — {{ entry.language }} — {{ entry.difficulty }}
+    </li>
+    {% endfor %}
+</ul>
+
+<script>
+let answers = [];
+
+function start() {
+    document.getElementById("loader").classList.remove("hidden");
+    document.getElementById("quiz").innerHTML = "";
+    document.getElementById("conversation").innerHTML = "";
+    answers = [];
+
+    fetch("/start", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            language: language.value,
+            difficulty: difficulty.value
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById("loader").classList.add("hidden");
+
+        if (data.error) {
+            quiz.innerHTML = "<p>" + data.error + "</p>";
+            return;
+        }
+
+        showQuiz(data);
+    })
+    .catch(err => {
+        document.getElementById("loader").classList.add("hidden");
+        quiz.innerHTML = "<p>Request failed: " + err + "</p>";
+    });
+}
+
+function showQuiz(qs) {
+    let html = "";
+    for (let i = 1; i <= 5; i++) {
+        html += `<p><b>${qs["q"+i]}</b></p>`;
+        qs["q"+i+"a"].forEach((a, idx) => {
+            html += `<button onclick="answers[${i-1}]='${idx+1}'">${idx+1}: ${a}</button><br>`;
+        });
+        html += "<br>";
+    }
+    html += `<button onclick="submit()">Submit</button>`;
+    quiz.innerHTML = html;
+}
+
+function submit() {
+    fetch("/submit", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({answers})
+    })
+    .then(r => r.json())
+    .then(data => {
+        quiz.innerHTML += `<p><b>Correct:</b> ${data.correct}/5</p>`;
+        quiz.innerHTML += `<p><b>Recommended Difficulty:</b> ${data.recommended}</p>`;
+        restart.classList.remove("hidden");
+
+        conversation.innerHTML = "";
+        data.conversation.forEach((c, idx) => {
+            conversation.innerHTML +=
+                `<p>Q${idx+1}: ${c.question}<br>` +
+                `You chose: ${c.chosen} | Correct: ${c.correct}</p>`;
+        });
+    })
+    .catch(err => {
+        quiz.innerHTML += "<p>Submission failed: " + err + "</p>";
+    });
+}
+</script>
 
 </body>
 </html>
