@@ -14,10 +14,7 @@ client = OpenAI(api_key=getenv("api_key"))
 
 DIFFICULTIES = ["no brainer", "easy", "medium", "hard", "impossible"]
 
-# In-memory leaderboard (resets if server restarts)
 leaderboard = []
-
-# In-memory XP store: { "username": xp_int }
 user_xp = {}
 
 
@@ -48,21 +45,18 @@ def get_json_response(system_prompt, user_prompt):
         return loads(response.choices[0].message.content)
     except Exception:
         return {}
-    
+
 
 def get_level_from_xp(xp):
-    # Level starts at 1
     return (xp // 20) + 1
 
 
 def get_xp_into_level(xp):
-    # how much xp into current level
     return xp % 20
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # already logged in
     if session.get("username"):
         return redirect("/")
 
@@ -70,11 +64,8 @@ def login():
         username = request.form.get("username", "").strip()
         if username:
             session["username"] = username
-
-            # initialize xp if new user
             if username not in user_xp:
                 user_xp[username] = 0
-
             return redirect("/")
 
     return render_template("login.html")
@@ -88,13 +79,11 @@ def logout():
 
 @app.route("/")
 def home():
-    # must be logged in
     if not session.get("username"):
         return redirect("/login")
 
     username = session.get("username")
 
-    # daily open counter (per user session)
     today = str(date.today())
     if session.get("last_login") != today:
         session["last_login"] = today
@@ -114,6 +103,13 @@ def home():
         level=level,
         xp_into_level=xp_into_level
     )
+
+
+@app.route("/flappy")
+def flappy():
+    if not session.get("username"):
+        return redirect("/login")
+    return render_template("flappy.html", username=session.get("username"))
 
 
 @app.route("/start", methods=["POST"])
@@ -170,7 +166,6 @@ Rules:
         f"The questions will ask users to translate English words into {lang} words using this list of words {words}."
     )
 
-    # basic validation
     for i in range(1, 6):
         if f"q{i}" not in questions or f"q{i}a" not in questions or f"q{i}c" not in questions:
             return jsonify({"error": "Question generation failed. Please try again."}), 500
@@ -210,14 +205,12 @@ def submit():
         if chosen is not None and str(chosen) == str(correct_option):
             correct += 1
 
-    # XP SYSTEM: 1 XP per correct answer
     user_xp[username] = user_xp.get(username, 0) + correct
 
     xp = user_xp[username]
     level = get_level_from_xp(xp)
     xp_into_level = get_xp_into_level(xp)
 
-    # recommend difficulty
     current_index = DIFFICULTIES.index(session["difficulty"])
     recommended = session["difficulty"]
 

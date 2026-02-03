@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Flappy Penguins</title>
+  <style>
+    body { font-family: Arial; padding: 20px; text-align: center; }
+    canvas { border: 2px solid black; background: #dff4ff; }
+    button { padding: 8px 12px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+<h1>🐧 Flappy Penguins</h1>
+<p>Logged in as: <b>{{ username }}</b> | <a href="/">Back to Language App</a></p>
+
+<p><b>How to play:</b> Press SPACE or click to flap.</p>
+
+<canvas id="game" width="400" height="500"></canvas>
+<br>
+<button onclick="restartGame()">Restart Game</button>
+
+<p id="scoreText"><b>Score:</b> 0</p>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let penguin, pipes, score, gameOver, frame;
+
+function initGame() {
+  penguin = {
+    x: 80,
+    y: 200,
+    w: 30,
+    h: 30,
+    vel: 0
+  };
+
+  pipes = [];
+  score = 0;
+  gameOver = false;
+  frame = 0;
+
+  spawnPipe();
+}
+
+function spawnPipe() {
+  const gap = 140;
+  const topHeight = Math.floor(Math.random() * 200) + 40;
+  const bottomY = topHeight + gap;
+
+  pipes.push({
+    x: canvas.width,
+    w: 60,
+    topH: topHeight,
+    bottomY: bottomY,
+    passed: false
+  });
+}
+
+function drawPenguin() {
+  // simple penguin: black body + white belly
+  ctx.fillStyle = "black";
+  ctx.fillRect(penguin.x, penguin.y, penguin.w, penguin.h);
+
+  ctx.fillStyle = "white";
+  ctx.fillRect(penguin.x + 8, penguin.y + 6, penguin.w - 16, penguin.h - 12);
+
+  // eye
+  ctx.fillStyle = "white";
+  ctx.fillRect(penguin.x + 20, penguin.y + 8, 6, 6);
+
+  ctx.fillStyle = "black";
+  ctx.fillRect(penguin.x + 23, penguin.y + 10, 2, 2);
+}
+
+function drawIcicles(pipe) {
+  // icicle pillars (instead of green pipes)
+  ctx.fillStyle = "#9be7ff";
+
+  // top
+  ctx.fillRect(pipe.x, 0, pipe.w, pipe.topH);
+
+  // bottom
+  ctx.fillRect(pipe.x, pipe.bottomY, pipe.w, canvas.height - pipe.bottomY);
+
+  // add triangle spikes for icicle look
+  ctx.fillStyle = "#6fd6ff";
+  for (let i = 0; i < pipe.w; i += 12) {
+    // top spikes
+    ctx.beginPath();
+    ctx.moveTo(pipe.x + i, pipe.topH);
+    ctx.lineTo(pipe.x + i + 6, pipe.topH + 14);
+    ctx.lineTo(pipe.x + i + 12, pipe.topH);
+    ctx.closePath();
+    ctx.fill();
+
+    // bottom spikes
+    ctx.beginPath();
+    ctx.moveTo(pipe.x + i, pipe.bottomY);
+    ctx.lineTo(pipe.x + i + 6, pipe.bottomY - 14);
+    ctx.lineTo(pipe.x + i + 12, pipe.bottomY);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function hitTest(pipe) {
+  // collision with top icicle
+  if (
+    penguin.x < pipe.x + pipe.w &&
+    penguin.x + penguin.w > pipe.x &&
+    penguin.y < pipe.topH
+  ) return true;
+
+  // collision with bottom icicle
+  if (
+    penguin.x < pipe.x + pipe.w &&
+    penguin.x + penguin.w > pipe.x &&
+    penguin.y + penguin.h > pipe.bottomY
+  ) return true;
+
+  return false;
+}
+
+function update() {
+  if (gameOver) return;
+
+  frame++;
+
+  // gravity
+  penguin.vel += 0.6;
+  penguin.y += penguin.vel;
+
+  // bounds
+  if (penguin.y < 0) penguin.y = 0;
+  if (penguin.y + penguin.h > canvas.height) gameOver = true;
+
+  // pipes
+  for (let p of pipes) {
+    p.x -= 2.5;
+
+    // scoring
+    if (!p.passed && p.x + p.w < penguin.x) {
+      p.passed = true;
+      score++;
+      document.getElementById("scoreText").innerHTML = "<b>Score:</b> " + score;
+    }
+
+    // collision
+    if (hitTest(p)) gameOver = true;
+  }
+
+  // remove offscreen
+  pipes = pipes.filter(p => p.x + p.w > 0);
+
+  // spawn new pipe every ~2 seconds
+  if (frame % 120 === 0) spawnPipe();
+}
+
+function draw() {
+  // background
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // pipes
+  for (let p of pipes) drawIcicles(p);
+
+  // penguin
+  drawPenguin();
+
+  if (gameOver) {
+    ctx.fillStyle = "red";
+    ctx.font = "28px Arial";
+    ctx.fillText("Game Over!", 120, 220);
+    ctx.font = "16px Arial";
+    ctx.fillText("Press Restart Game", 130, 250);
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function flap() {
+  if (gameOver) return;
+  penguin.vel = -8;
+}
+
+function restartGame() {
+  initGame();
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space") flap();
+});
+
+canvas.addEventListener("click", () => flap());
+
+initGame();
+loop();
+</script>
+
+</body>
+</html>
