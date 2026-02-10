@@ -56,7 +56,7 @@ function startCountdown(){
 
 /* ========= PIPES ========= */
 function spawnPipe(){
-  const gap=150;
+  const gap=200;
   const top=Math.random()*200+40;
   pipes.push({
     x:canvas.width,
@@ -197,10 +197,21 @@ function flap(){
 
 function restartGame(){ initGame(); }
 
-document.addEventListener("keydown",e=>{
-  if(e.code==="Space"){ e.preventDefault(); flap(); }
-  if(e.code==="KeyR"){ restartGame(); }
+ddocument.addEventListener("keydown", function(e){
+
+  // prevent holding key from causing issues
+  if(e.repeat) return;
+
+  if(e.code === "Space"){
+    e.preventDefault();   // stop page scroll
+    flap();               // jump
+  }
+
+  if(e.code === "KeyR"){
+    restartGame();
+  }
 });
+
 
 canvas.addEventListener("mousedown",e=>{
   e.preventDefault();
