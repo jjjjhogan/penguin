@@ -17,20 +17,28 @@
 <br>
 <button onclick="restartGame()">Restart Game</button>
 <p id="scoreText"><b>Score:</b> 0</p>
+<p id="fpsText"><b>FPS:</b> 0</p>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 /* ========= PHYSICS ========= */
-const GRAVITY = 0.13;                     // slower fall
-const JUMP_FORCE = canvas.height * 0.01; // 3% jump height
-const PIPE_GAP = 210;                    // bigger gap
+const GRAVITY = 0.13;
+const JUMP_FORCE = canvas.height * 0.01;
+const PIPE_GAP = 210;
 
+/* ========= FPS CONTROL ========= */
+const TARGET_FPS = 60;
+const FRAME_TIME = 1000 / TARGET_FPS;
+
+let lastTime = 0;
+let fpsCounter = 0;
+let fpsTimer = 0;
+
+/* ========= GAME STATE ========= */
 let penguin, pipes, score, frame;
 let gameOver = false;
-let countdown = 3;
-let countdownActive = true;
 
 /* ========= INIT ========= */
 function initGame(){
@@ -41,21 +49,8 @@ function initGame(){
   gameOver = false;
 
   document.getElementById("scoreText").innerHTML="<b>Score:</b> 0";
-  startCountdown();
-}
 
-function startCountdown(){
-  countdown = 3;
-  countdownActive = true;
-
-  const timer=setInterval(()=>{
-    countdown--;
-    if(countdown<=0){
-      clearInterval(timer);
-      countdownActive=false;
-      spawnPipe();
-    }
-  },1000);
+  spawnPipe();
 }
 
 /* ========= PIPES ========= */
@@ -110,14 +105,6 @@ function drawPipes(pipe){
   ctx.fillRect(pipe.x,pipe.bottomY,pipe.w,canvas.height-pipe.bottomY);
 }
 
-function drawCountdown(){
-  ctx.fillStyle="black";
-  ctx.font="48px Arial";
-  ctx.textAlign="center";
-  ctx.fillText(countdown>0?countdown:"GO!",canvas.width/2,canvas.height/2);
-  ctx.textAlign="left";
-}
-
 /* ========= COLLISION ========= */
 function hit(pipe){
   return (
@@ -141,8 +128,6 @@ function update(){
   if(penguin.y + penguin.h > canvas.height)
       gameOver = true;
 
-  if(countdownActive) return;
-
   for(let p of pipes){
     p.x -= 2;
 
@@ -160,14 +145,12 @@ function update(){
   if(frame%120===0) spawnPipe();
 }
 
-/* ========= RENDER LOOP ========= */
+/* ========= RENDER ========= */
 function render(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
 
   for(let p of pipes) drawPipes(p);
   drawPenguin();
-
-  if(countdownActive) drawCountdown();
 
   if(gameOver){
     ctx.fillStyle="red";
@@ -176,25 +159,41 @@ function render(){
   }
 }
 
-function gameLoop(){
-  update();
-  render();
+/* ========= GAME LOOP (60 FPS LOCK) ========= */
+function gameLoop(timestamp){
+
+  const delta = timestamp - lastTime;
+
+  if(delta >= FRAME_TIME){
+    lastTime = timestamp - (delta % FRAME_TIME);
+
+    update();
+    render();
+
+    // FPS Calculation
+    fpsCounter++;
+    fpsTimer += delta;
+
+    if(fpsTimer >= 1000){
+      document.getElementById("fpsText").innerHTML =
+        "<b>FPS:</b> " + fpsCounter;
+      fpsCounter = 0;
+      fpsTimer = 0;
+    }
+  }
+
   requestAnimationFrame(gameLoop);
 }
 
 /* ========= CONTROLS ========= */
 function flap(){
   if(gameOver) return;
-
-  // ⭐ jump uses screen percentage
   penguin.vel = -JUMP_FORCE;
 }
 
 function restartGame(){ initGame(); }
 
 document.addEventListener("keydown", function(e){
-
-  // prevent holding key from causing issues
   if(e.repeat) return;
 
   if(e.code==="Space"){
@@ -214,7 +213,7 @@ canvas.addEventListener("mousedown", e=>{
 
 /* ========= START ========= */
 initGame();
-gameLoop();
+requestAnimationFrame(gameLoop);
 </script>
 
 </body>
