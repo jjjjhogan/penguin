@@ -189,7 +189,6 @@ function loop(){
 /* ========= CONTROLS ========= */
 function flap(){
   if(gameOver) return;
-  if(countdownActive) return;
 
   // ⭐ jump uses screen percentage
   penguin.vel = -JUMP;
@@ -197,7 +196,7 @@ function flap(){
 
 function restartGame(){ initGame(); }
 
-ddocument.addEventListener("keydown", function(e){
+document.addEventListener("keydown", function(e){
 
   // prevent holding key from causing issues
   if(e.repeat) return;
