@@ -3,15 +3,14 @@
 <head>
   <title>Flappy Penguins</title>
   <style>
-    body { font-family: Arial; padding: 20px; text-align: center; }
-    canvas { border: 2px solid black; background: #dff4ff; }
-    button { padding: 8px 12px; margin-top: 10px; cursor: pointer; }
+    body { font-family: Arial; padding: 20px; text-align:center; }
+    canvas { border:2px solid black; background:#dff4ff; }
+    button { padding:8px 12px; margin-top:10px; cursor:pointer; }
   </style>
 </head>
 <body>
 
 <h1>🐧 Flappy Penguins</h1>
-<p>Logged in as: <b>{{ username }}</b> | <a href="/">Back</a></p>
 <p><b>Controls:</b> SPACE or Click to flap • Press R to restart</p>
 
 <canvas id="game" width="400" height="500"></canvas>
@@ -23,17 +22,20 @@
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-let penguin, pipes, score, gameOver, frame;
+const GRAVITY = 0.22 * 0.6;   // ⭐ 40% slower falling
+const JUMP = canvas.height * 0.03; // ⭐ 3% of screen height
+
+let penguin, pipes, score, frame, gameOver;
 let countdown = 3;
 let countdownActive = true;
-let countdownTimer = null;
 
-function initGame() {
-  penguin = { x:80, y:200, w:34, h:38, vel:0 };
-  pipes = [];
-  score = 0;
-  gameOver = false;
-  frame = 0;
+/* ========= INIT ========= */
+function initGame(){
+  penguin = {x:80, y:200, w:34, h:38, vel:0};
+  pipes=[];
+  score=0;
+  frame=0;
+  gameOver=false;
   document.getElementById("scoreText").innerHTML="<b>Score:</b> 0";
   startCountdown();
 }
@@ -41,54 +43,50 @@ function initGame() {
 function startCountdown(){
   countdown=3;
   countdownActive=true;
-  if(countdownTimer) clearInterval(countdownTimer);
 
-  countdownTimer=setInterval(()=>{
+  let timer=setInterval(()=>{
     countdown--;
     if(countdown<=0){
+      clearInterval(timer);
       countdownActive=false;
-      clearInterval(countdownTimer);
       spawnPipe();
     }
   },1000);
 }
 
+/* ========= PIPES ========= */
 function spawnPipe(){
   const gap=150;
-  const topHeight=Math.random()*200+40;
+  const top=Math.random()*200+40;
   pipes.push({
     x:canvas.width,
     w:60,
-    topH:topHeight,
-    bottomY:topHeight+gap,
+    topH:top,
+    bottomY:top+gap,
     passed:false
   });
 }
 
-/* ========= REALISTIC PENGUIN DRAW ========= */
+/* ========= DRAW PENGUIN ========= */
 function drawPenguin(){
   const x=penguin.x;
   const y=penguin.y;
 
-  // body
   ctx.fillStyle="black";
   ctx.beginPath();
   ctx.ellipse(x+17,y+19,17,19,0,0,Math.PI*2);
   ctx.fill();
 
-  // belly
   ctx.fillStyle="white";
   ctx.beginPath();
   ctx.ellipse(x+17,y+22,10,14,0,0,Math.PI*2);
   ctx.fill();
 
-  // wing
   ctx.fillStyle="black";
   ctx.beginPath();
   ctx.ellipse(x+5,y+22,6,12,0,0,Math.PI*2);
   ctx.fill();
 
-  // eye
   ctx.fillStyle="white";
   ctx.beginPath();
   ctx.arc(x+23,y+12,4,0,Math.PI*2);
@@ -99,7 +97,6 @@ function drawPenguin(){
   ctx.arc(x+24,y+12,2,0,Math.PI*2);
   ctx.fill();
 
-  // beak
   ctx.fillStyle="orange";
   ctx.beginPath();
   ctx.moveTo(x+30,y+18);
@@ -107,29 +104,15 @@ function drawPenguin(){
   ctx.lineTo(x+30,y+22);
   ctx.fill();
 }
-/* ========================================== */
 
+/* ========= ICICLES ========= */
 function drawIcicles(pipe){
   ctx.fillStyle="#9be7ff";
   ctx.fillRect(pipe.x,0,pipe.w,pipe.topH);
   ctx.fillRect(pipe.x,pipe.bottomY,pipe.w,canvas.height-pipe.bottomY);
-
-  ctx.fillStyle="#6fd6ff";
-  for(let i=0;i<pipe.w;i+=12){
-    ctx.beginPath();
-    ctx.moveTo(pipe.x+i,pipe.topH);
-    ctx.lineTo(pipe.x+i+6,pipe.topH+14);
-    ctx.lineTo(pipe.x+i+12,pipe.topH);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(pipe.x+i,pipe.bottomY);
-    ctx.lineTo(pipe.x+i+6,pipe.bottomY-14);
-    ctx.lineTo(pipe.x+i+12,pipe.bottomY);
-    ctx.fill();
-  }
 }
 
+/* ========= COLLISION ========= */
 function hitTest(pipe){
   if(penguin.x < pipe.x+pipe.w &&
      penguin.x+penguin.w > pipe.x &&
@@ -142,55 +125,58 @@ function hitTest(pipe){
   return false;
 }
 
+/* ========= UPDATE ========= */
 function update(){
   if(gameOver) return;
+
   frame++;
 
-  /* ===== MUCH SLOWER FALL ===== */
-  penguin.vel += 0.22;   // gravity reduced again
+  // gravity
+  penguin.vel += GRAVITY;
   penguin.y += penguin.vel;
-  /* ============================ */
 
-  if(penguin.y<0) penguin.y=0;
-  if(penguin.y+penguin.h>canvas.height) gameOver=true;
+  if(penguin.y < 0) penguin.y = 0;
+  if(penguin.y + penguin.h > canvas.height)
+      gameOver = true;
 
   if(countdownActive) return;
 
   for(let p of pipes){
-    p.x-=2.1;
+    p.x -= 2;
 
-    if(!p.passed && p.x+p.w<penguin.x){
+    if(!p.passed && p.x+p.w < penguin.x){
       p.passed=true;
       score++;
-      document.getElementById("scoreText").innerHTML="<b>Score:</b> "+score;
+      document.getElementById("scoreText").innerHTML="<b>Score:</b>"+score;
     }
 
     if(hitTest(p)) gameOver=true;
   }
 
   pipes=pipes.filter(p=>p.x+p.w>0);
+
   if(frame%120===0) spawnPipe();
 }
 
-function drawCountdown(){
-  ctx.fillStyle="rgba(0,0,0,0.6)";
-  ctx.font="48px Arial";
-  ctx.textAlign="center";
-  ctx.fillText(countdown>0?countdown:"GO!",200,250);
-  ctx.textAlign="left";
-}
-
+/* ========= DRAW ========= */
 function draw(){
   ctx.clearRect(0,0,canvas.width,canvas.height);
+
   for(let p of pipes) drawIcicles(p);
   drawPenguin();
 
-  if(countdownActive) drawCountdown();
+  if(countdownActive){
+    ctx.fillStyle="black";
+    ctx.font="48px Arial";
+    ctx.textAlign="center";
+    ctx.fillText(countdown>0?countdown:"GO!",200,250);
+    ctx.textAlign="left";
+  }
 
   if(gameOver){
     ctx.fillStyle="red";
-    ctx.font="26px Arial";
-    ctx.fillText("Game Over",120,220);
+    ctx.font="28px Arial";
+    ctx.fillText("Game Over",120,230);
   }
 }
 
@@ -200,22 +186,23 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
-/* ===== FLAP CONTROL FIX ===== */
+/* ========= CONTROLS ========= */
 function flap(){
-  if(gameOver || countdownActive) return;
-  penguin.vel = -6;  // gentle lift
+  if(gameOver) return;
+  if(countdownActive) return;
+
+  // ⭐ jump uses screen percentage
+  penguin.vel = -JUMP;
 }
-/* ============================ */
 
 function restartGame(){ initGame(); }
 
-document.addEventListener("keydown",(e)=>{
+document.addEventListener("keydown",e=>{
   if(e.code==="Space"){ e.preventDefault(); flap(); }
   if(e.code==="KeyR"){ restartGame(); }
 });
 
-/* FIX — click won't trigger instant drop */
-canvas.addEventListener("mousedown",(e)=>{
+canvas.addEventListener("mousedown",e=>{
   e.preventDefault();
   flap();
 });
