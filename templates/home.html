@@ -1,18 +1,67 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <title>Home</title>
+    <style>
+        body{
+            font-family: Arial;
+            text-align:center;
+            padding:40px;
+            background:#f0f8ff;
+        }
+
+        h1{
+            margin-bottom:20px;
+        }
+
+        .card{
+            display:inline-block;
+            padding:30px;
+            background:white;
+            border-radius:12px;
+            box-shadow:0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        button{
+            padding:10px 18px;
+            margin:10px;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+            font-size:16px;
+        }
+
+        .play{
+            background:#4CAF50;
+            color:white;
+        }
+
+        .logout{
+            background:#f44336;
+            color:white;
+        }
+    </style>
+</head>
+
 <body>
 
-<h1>Welcome {{username}}</h1>
+<div class="card">
 
-<a href="/flappy">
-<button>Play Flappy Penguins</button>
-</a>
+    <h1>Welcome, {{ username }} 👋</h1>
 
-<br><br>
+    <p>Select an option below:</p>
 
-<a href="/logout">
-<button>Logout</button>
-</a>
+    <a href="/flappy">
+        <button class="play">🐧 Play Flappy Penguins</button>
+    </a>
+
+    <br>
+
+    <a href="/logout">
+        <button class="logout">Logout</button>
+    </a>
+
+</div>
 
 </body>
 </html>
