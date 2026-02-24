@@ -1,168 +1,169 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>🐧 Penguin Language App</title>
-    <style>
-        body { font-family: Arial; padding: 20px; }
-        .hidden { display: none; }
-        .loader { font-size: 18px; margin-top: 10px; }
-        button { margin: 2px 0; padding: 6px 10px; }
-        .selected {
-            border: 2px solid black;
-            font-weight: bold;
-        }
-    </style>
+<title>Language Learning</title>
+
+<style>
+body{
+    font-family:Arial;
+    text-align:center;
+    padding:40px;
+    background:#f0f8ff;
+}
+
+.card{
+    display:inline-block;
+    padding:30px;
+    background:white;
+    border-radius:12px;
+    box-shadow:0 4px 12px rgba(0,0,0,0.1);
+    max-width:600px;
+}
+
+button{
+    padding:10px 18px;
+    margin:10px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:16px;
+}
+
+.start{background:#2196F3;color:white;}
+.home{background:#555;color:white;}
+.correct{color:green;font-weight:bold;}
+.wrong{color:red;font-weight:bold;}
+
+.question-block{
+    text-align:left;
+    margin-bottom:15px;
+}
+
+.leaderboard{
+    margin-top:20px;
+}
+</style>
 </head>
+
 <body>
 
-<h1>🐧 Penguin Language Learning App</h1>
+<div class="card">
 
-<p>
-  Logged in as: <b>{{ username }}</b> |
-  <a href="/logout">Logout</a>
-</p>
-<p><a href="/flappy">🎮 Play Flappy Penguins</a></p>
+<h1>Language Learning Game</h1>
 
-<p>
-  <b>Level:</b> {{ level }} |
-  <b>XP:</b> {{ xp }} |
-  <b>Progress:</b> {{ xp_into_level }}/20
-</p>
+<a href="/"><button class="home">⬅ Back To Home</button></a>
 
-<h3>How to Play</h3>
-<p>
-1. Choose a language and difficulty.<br>
-2. Answer 5 questions.<br>
-3. Submit and see results.<br>
-4. Restart to play again.
-</p>
+<br><br>
 
-<p><b>Daily Visits:</b> {{ daily_logins }}</p>
+<input id="lang" placeholder="Language">
+<select id="diffy">
+<option>easy</option>
+<option>medium</option>
+<option>hard</option>
+</select>
 
-<hr>
+<br>
 
-<label>Language:</label>
-<input id="language" placeholder="Spanish"><br><br>
+<button class="start" onclick="startGame()">Start</button>
 
-<label>Difficulty:</label>
-<select id="difficulty">
-    {% for d in difficulties %}
-    <option value="{{ d }}">{{ d }}</option>
-    {% endfor %}
-</select><br><br>
-
-<button onclick="start()">Start</button>
-
-<div id="loader" class="loader hidden">⏳ Loading questions...</div>
-
-<div id="quiz"></div>
-
-<button id="restart" class="hidden" onclick="location.reload()">Restart</button>
-
-<h3>Conversation Log</h3>
-<div id="conversation"></div>
+<div id="game"></div>
 
 <h3>Leaderboard</h3>
-<ul>
-    {% for entry in leaderboard %}
-    <li>
-      {{ entry.user }} — {{ entry.score }}/5 — {{ entry.language }} — {{ entry.difficulty }}
-    </li>
-    {% endfor %}
-</ul>
+<ol id="leaderboard"></ol>
+
+</div>
 
 <script>
-let answers = [];
 
-function start() {
-    document.getElementById("loader").classList.remove("hidden");
-    document.getElementById("quiz").innerHTML = "";
-    document.getElementById("conversation").innerHTML = "";
-    answers = [];
+function startGame(){
 
-    fetch("/start", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            language: language.value,
-            difficulty: difficulty.value
-        })
-    })
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById("loader").classList.add("hidden");
+fetch("/start_language",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+lang:document.getElementById("lang").value,
+diffy:document.getElementById("diffy").value
+})
+})
+.then(r=>r.json())
+.then(data=>{
 
-        if (data.error) {
-            quiz.innerHTML = "<p>" + data.error + "</p>";
-            return;
-        }
+let html=""
 
-        showQuiz(data);
-    })
-    .catch(err => {
-        document.getElementById("loader").classList.add("hidden");
-        quiz.innerHTML = "<p>Request failed: " + err + "</p>";
-    });
+for(let i=1;i<=5;i++){
+html+=`<div class="question-block">
+<p>${data.questions["q"+i]}</p>`
+
+data.questions["q"+i+"a"].forEach((a,j)=>{
+html+=`
+<label>
+<input type="radio" name="q${i}" value="${j+1}">
+${a}
+</label><br>`
+})
+
+html+=`</div>`
 }
 
-function selectAnswer(questionIndex, answerNumber) {
-    answers[questionIndex] = String(answerNumber);
+html+=`<button onclick="submitAnswers()">Submit</button>`
 
-    document.querySelectorAll(`.q${questionIndex}-btn`).forEach(btn => {
-        btn.classList.remove("selected");
-    });
-
-    const clicked = document.getElementById(`q${questionIndex}-a${answerNumber}`);
-    if (clicked) clicked.classList.add("selected");
+document.getElementById("game").innerHTML=html
+})
 }
 
-function showQuiz(qs) {
-    let html = "";
-    for (let i = 1; i <= 5; i++) {
-        html += `<p><b>${qs["q"+i]}</b></p>`;
-        qs["q"+i+"a"].forEach((a, idx) => {
-            const ansNum = idx + 1;
-            html += `
-                <button
-                    id="q${i-1}-a${ansNum}"
-                    class="q${i-1}-btn"
-                    onclick="selectAnswer(${i-1}, ${ansNum})"
-                >
-                    ${ansNum}: ${a}
-                </button><br>
-            `;
-        });
-        html += "<br>";
-    }
-    html += `<button onclick="submit()">Submit</button>`;
-    quiz.innerHTML = html;
+function submitAnswers(){
+
+let answers=[]
+
+for(let i=1;i<=5;i++){
+let choice=document.querySelector(`input[name="q${i}"]:checked`)
+answers.push(choice?choice.value:"0")
 }
 
-function submit() {
-    fetch("/submit", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({answers})
-    })
-    .then(r => r.json())
-    .then(data => {
-        quiz.innerHTML += `<p><b>Correct:</b> ${data.correct}/5</p>`;
-        quiz.innerHTML += `<p><b>Recommended Difficulty:</b> ${data.recommended}</p>`;
-        quiz.innerHTML += `<p><b>XP:</b> ${data.xp} | <b>Level:</b> ${data.level} | <b>Progress:</b> ${data.xp_into_level}/20</p>`;
+fetch("/submit_language",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({answers:answers})
+})
+.then(r=>r.json())
+.then(data=>{
 
-        restart.classList.remove("hidden");
+let html=`<h2>Your Score: ${data.score}/5</h2>`
 
-        conversation.innerHTML = "";
-        data.conversation.forEach((c, idx) => {
-            conversation.innerHTML +=
-                `<p>Q${idx+1}: ${c.question}<br>` +
-                `You chose: ${c.chosen} | Correct: ${c.correct}</p>`;
-        });
-    })
-    .catch(err => {
-        quiz.innerHTML += "<p>Submission failed: " + err + "</p>";
-    });
+data.results.forEach((r,i)=>{
+
+html+=`<div class="question-block">`
+html+=`<p><b>Q${i+1}:</b> ${r.question}</p>`
+
+if(r.is_correct){
+html+=`<p class="correct">✔ Correct</p>`
+}else{
+html+=`<p class="wrong">✖ Wrong</p>`
+html+=`<p>Correct Answer: ${r.choices[r.correct-1]}</p>`
 }
+
+html+=`</div>`
+})
+
+document.getElementById("game").innerHTML=html
+loadLeaderboard()
+})
+}
+
+function loadLeaderboard(){
+fetch("/get_language_leaderboard")
+.then(r=>r.json())
+.then(data=>{
+let html=""
+data.forEach(s=>{
+html+=`<li>${s.user} : ${s.score}</li>`
+})
+document.getElementById("leaderboard").innerHTML=html
+})
+}
+
+loadLeaderboard()
+
 </script>
 
 </body>
