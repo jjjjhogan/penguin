@@ -1,224 +1,205 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Flappy Penguins</title>
-  <style>
-    body { font-family: Arial; padding:20px; text-align:center; }
-    canvas { border:2px solid black; background:#dff4ff; }
-    button { padding:8px 12px; margin-top:10px; cursor:pointer; }
-  </style>
+<title>Flappy Penguins</title>
+<style>
+body{font-family:Arial;text-align:center;padding:20px}
+canvas{border:2px solid black;background:#dff4ff}
+button{padding:8px 12px;margin:5px;cursor:pointer}
+</style>
 </head>
+
 <body>
 
 <h1>🐧 Flappy Penguins</h1>
 <p><b>SPACE</b> or Click to jump • <b>R</b> to restart</p>
 
+<button onclick="goHome()">⬅ Back To Home</button>
+<br><br>
+
 <canvas id="game" width="400" height="500"></canvas>
 <br>
 <button onclick="restartGame()">Restart Game</button>
-<p id="scoreText"><b>Score:</b> 0</p>
-<p id="fpsText"><b>FPS:</b> 0</p>
+
+<p id="scoreText"><b>Score:</b>0</p>
+
+<h2>Leaderboard</h2>
+<ol id="leaderboard"></ol>
 
 <script>
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
 
-/* ========= PHYSICS ========= */
-const GRAVITY = 0.13;
-const JUMP_FORCE = canvas.height * 0.01;
-const PIPE_GAP = 210;
+const canvas=document.getElementById("game")
+const ctx=canvas.getContext("2d")
 
-/* ========= FPS CONTROL ========= */
-const TARGET_FPS = 80;
-const FRAME_TIME = 1000 / TARGET_FPS;
+const GRAVITY=0.13
+const JUMP_FORCE=canvas.height*0.01
+const PIPE_GAP=210
 
-let lastTime = 0;
-let fpsCounter = 0;
-let fpsTimer = 0;
+let penguin,pipes,score,frame,gameOver=false
 
-/* ========= GAME STATE ========= */
-let penguin, pipes, score, frame;
-let gameOver = false;
+/* ===== 60 FPS LOOP ===== */
+let fps=60
+let interval=1000/fps
+let lastTime=0
 
-/* ========= INIT ========= */
+function gameLoop(time){
+if(time-lastTime>interval){
+lastTime=time
+update()
+render()
+}
+requestAnimationFrame(gameLoop)
+}
+
+/* ===== INIT ===== */
 function initGame(){
-  penguin = {x:80, y:200, w:34, h:38, vel:0};
-  pipes = [];
-  score = 0;
-  frame = 0;
-  gameOver = false;
-
-  document.getElementById("scoreText").innerHTML="<b>Score:</b> 0";
-
-  spawnPipe();
+penguin={x:80,y:200,w:34,h:38,vel:0}
+pipes=[]
+score=0
+frame=0
+gameOver=false
+document.getElementById("scoreText").innerHTML="<b>Score:</b>0"
+spawnPipe()
 }
 
-/* ========= PIPES ========= */
+/* ===== HOME BUTTON ===== */
+function goHome(){
+window.location.href="/"
+}
+
+/* ===== LEADERBOARD ===== */
+function saveScore(){
+let lb=JSON.parse(localStorage.getItem("flappyLB"))||[]
+lb.push(score)
+lb.sort((a,b)=>b-a)
+lb=lb.slice(0,5)
+localStorage.setItem("flappyLB",JSON.stringify(lb))
+showLeaderboard()
+}
+
+function showLeaderboard(){
+let lb=JSON.parse(localStorage.getItem("flappyLB"))||[]
+let html=""
+lb.forEach(s=>html+=`<li>${s}</li>`)
+document.getElementById("leaderboard").innerHTML=html
+}
+
+/* ===== PIPES ===== */
 function spawnPipe(){
-  const top = Math.random()*180 + 40;
-
-  pipes.push({
-    x: canvas.width,
-    w: 60,
-    topH: top,
-    bottomY: top + PIPE_GAP,
-    passed:false
-  });
+const top=Math.random()*180+40
+pipes.push({x:canvas.width,w:60,topH:top,bottomY:top+PIPE_GAP,passed:false})
 }
 
-/* ========= DRAW ========= */
-function drawPenguin(){
-  const x=penguin.x;
-  const y=penguin.y;
-
-  ctx.fillStyle="black";
-  ctx.beginPath();
-  ctx.ellipse(x+17,y+19,17,19,0,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.fillStyle="white";
-  ctx.beginPath();
-  ctx.ellipse(x+17,y+22,10,14,0,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.fillStyle="orange";
-  ctx.beginPath();
-  ctx.moveTo(x+30,y+18);
-  ctx.lineTo(x+40,y+15);
-  ctx.lineTo(x+30,y+22);
-  ctx.fill();
-
-  ctx.fillStyle="white";
-  ctx.beginPath();
-  ctx.arc(x+23,y+12,4,0,Math.PI*2);
-  ctx.fill();
-
-  ctx.fillStyle="black";
-  ctx.beginPath();
-  ctx.arc(x+24,y+12,2,0,Math.PI*2);
-  ctx.fill();
+/* ===== COLLISION ===== */
+function hit(p){
+return(
+penguin.x<p.x+p.w &&
+penguin.x+penguin.w>p.x &&
+(penguin.y<p.topH||penguin.y+penguin.h>p.bottomY)
+)
 }
 
-function drawPipes(pipe){
-  ctx.fillStyle="#9be7ff";
-  ctx.fillRect(pipe.x,0,pipe.w,pipe.topH);
-  ctx.fillRect(pipe.x,pipe.bottomY,pipe.w,canvas.height-pipe.bottomY);
-}
-
-/* ========= COLLISION ========= */
-function hit(pipe){
-  return (
-    penguin.x < pipe.x + pipe.w &&
-    penguin.x + penguin.w > pipe.x &&
-    (penguin.y < pipe.topH ||
-     penguin.y + penguin.h > pipe.bottomY)
-  );
-}
-
-/* ========= UPDATE ========= */
+/* ===== UPDATE ===== */
 function update(){
-  if(gameOver) return;
+if(gameOver)return
 
-  frame++;
+frame++
 
-  penguin.vel += GRAVITY;
-  penguin.y += penguin.vel;
+penguin.vel+=GRAVITY
+penguin.y+=penguin.vel
 
-  if(penguin.y < 0) penguin.y = 0;
-  if(penguin.y + penguin.h > canvas.height)
-      gameOver = true;
-
-  for(let p of pipes){
-    p.x -= 2;
-
-    if(!p.passed && p.x+p.w < penguin.x){
-      p.passed=true;
-      score++;
-      document.getElementById("scoreText").innerHTML="<b>Score:</b>"+score;
-    }
-
-    if(hit(p)) gameOver=true;
-  }
-
-  pipes=pipes.filter(p=>p.x+p.w>0);
-
-  if(frame%120===0) spawnPipe();
+if(penguin.y<0)penguin.y=0
+if(penguin.y+penguin.h>canvas.height){
+gameOver=true
+saveScore()
 }
 
-/* ========= RENDER ========= */
+for(let p of pipes){
+p.x-=2
+
+if(!p.passed && p.x+p.w<penguin.x){
+p.passed=true
+score++
+document.getElementById("scoreText").innerHTML="<b>Score:</b>"+score
+}
+
+if(hit(p)){
+gameOver=true
+saveScore()
+}
+}
+
+pipes=pipes.filter(p=>p.x+p.w>0)
+
+if(frame%120===0)spawnPipe()
+}
+
+/* ===== DRAW ===== */
+function drawPenguin(){
+let x=penguin.x
+let y=penguin.y
+
+ctx.fillStyle="black"
+ctx.beginPath()
+ctx.ellipse(x+17,y+19,17,19,0,0,Math.PI*2)
+ctx.fill()
+
+ctx.fillStyle="white"
+ctx.beginPath()
+ctx.ellipse(x+17,y+22,10,14,0,0,Math.PI*2)
+ctx.fill()
+
+ctx.fillStyle="orange"
+ctx.beginPath()
+ctx.moveTo(x+30,y+18)
+ctx.lineTo(x+40,y+15)
+ctx.lineTo(x+30,y+22)
+ctx.fill()
+}
+
+function drawPipes(p){
+ctx.fillStyle="#9be7ff"
+ctx.fillRect(p.x,0,p.w,p.topH)
+ctx.fillRect(p.x,p.bottomY,p.w,canvas.height-p.bottomY)
+}
+
+/* ===== RENDER ===== */
 function render(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.clearRect(0,0,canvas.width,canvas.height)
+for(let p of pipes)drawPipes(p)
+drawPenguin()
 
-  for(let p of pipes) drawPipes(p);
-  drawPenguin();
-
-  if(gameOver){
-    ctx.fillStyle="red";
-    ctx.font="28px Arial";
-    ctx.fillText("Game Over",120,240);
-  }
+if(gameOver){
+ctx.fillStyle="red"
+ctx.font="28px Arial"
+ctx.fillText("Game Over",120,240)
+}
 }
 
-/* ========= GAME LOOP (60 FPS LOCK) ========= */
-function gameLoop(timestamp){
-
-  const delta = timestamp - lastTime;
-
-  if(delta >= FRAME_TIME){
-    lastTime = timestamp - (delta % FRAME_TIME);
-
-    update();
-    render();
-
-    // FPS Calculation
-    fpsCounter++;
-    fpsTimer += delta;
-
-    if(fpsTimer >= 1000){
-      document.getElementById("fpsText").innerHTML =
-        "<b>FPS:</b> " + fpsCounter;
-      fpsCounter = 0;
-      fpsTimer = 0;
-    }
-  }
-
-  requestAnimationFrame(gameLoop);
-}
-
-/* ========= CONTROLS ========= */
+/* ===== CONTROLS ===== */
 function flap(){
-  if(gameOver) return;
-  penguin.vel = -JUMP_FORCE;
+if(gameOver)return
+penguin.vel=-JUMP_FORCE
 }
 
-function restartGame(){ initGame(); }
+function restartGame(){initGame()}
 
-document.addEventListener("keydown", function(e){
-  if(e.repeat) return;
+document.addEventListener("keydown",e=>{
+if(e.repeat)return
+if(e.code==="Space"){e.preventDefault();flap()}
+if(e.code==="KeyR"){restartGame()}
+})
 
-  if(e.code==="Space"){
-    e.preventDefault();
-    flap();
-  }
+canvas.addEventListener("mousedown",e=>{
+e.preventDefault()
+flap()
+})
 
-  if(e.code==="KeyR"){
-    restartGame();
-  }
-});
+/* ===== START ===== */
+initGame()
+showLeaderboard()
+requestAnimationFrame(gameLoop)
 
-canvas.addEventListener("mousedown", e=>{
-  e.preventDefault();
-  flap();
-});
-
-/* ========= START ========= */
-initGame();
-requestAnimationFrame(gameLoop);
 </script>
-
 </body>
 </html>
-
-
-
-https://chatgpt.com/share/6978164f-9780-8008-a644-dd72c4ba64a8
