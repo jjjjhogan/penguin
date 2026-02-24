@@ -1,240 +1,65 @@
-from flask import Flask, render_template, request, jsonify, session, redirect
-from openai import OpenAI
-from dotenv import load_dotenv
-from os import getenv
-from json import loads
-from datetime import date
-
-load_dotenv()
+from flask import Flask, render_template, request, session, redirect, jsonify
+import json
 
 app = Flask(__name__)
-app.secret_key = "penguin-secret-key"
+app.secret_key = "penguin_secret"
 
-client = OpenAI(api_key=getenv("api_key"))
+FLAPPY_FILE = "flappy_scores.json"
 
-DIFFICULTIES = ["no brainer", "easy", "medium", "hard", "impossible"]
-
-leaderboard = []
-user_xp = {}
-
-
-def get_standard_response(system_prompt, user_prompt):
+def load_flappy():
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
-        )
-        return response.choices[0].message.content
-    except Exception:
-        return "[]"
+        with open(FLAPPY_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return []
 
+def save_flappy(data):
+    with open(FLAPPY_FILE, "w") as f:
+        json.dump(data, f)
 
-def get_json_response(system_prompt, user_prompt):
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ]
-        )
-        return loads(response.choices[0].message.content)
-    except Exception:
-        return {}
+@app.route("/")
+def home():
+    if "username" not in session:
+        return redirect("/login")
+    return render_template("home.html", username=session["username"])
 
-
-def get_level_from_xp(xp):
-    return (xp // 20) + 1
-
-
-def get_xp_into_level(xp):
-    return xp % 20
-
-
-@app.route("/login", methods=["GET", "POST"])
+@app.route("/login", methods=["GET","POST"])
 def login():
-    if session.get("username"):
-        return redirect("/")
-
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        if username:
-            session["username"] = username
-            if username not in user_xp:
-                user_xp[username] = 0
-            return redirect("/")
-
+        session["username"] = request.form.get("username")
+        return redirect("/")
     return render_template("login.html")
-
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect("/login")
 
-
-@app.route("/")
-def home():
-    if not session.get("username"):
-        return redirect("/login")
-
-    username = session.get("username")
-
-    today = str(date.today())
-    if session.get("last_login") != today:
-        session["last_login"] = today
-        session["daily_logins"] = session.get("daily_logins", 0) + 1
-
-    xp = user_xp.get(username, 0)
-    level = get_level_from_xp(xp)
-    xp_into_level = get_xp_into_level(xp)
-
-    return render_template(
-        "index.html",
-        leaderboard=leaderboard,
-        daily_logins=session.get("daily_logins", 1),
-        difficulties=DIFFICULTIES,
-        username=username,
-        xp=xp,
-        level=level,
-        xp_into_level=xp_into_level
-    )
-
-
 @app.route("/flappy")
 def flappy():
-    if not session.get("username"):
+    if "username" not in session:
         return redirect("/login")
-    return render_template("flappy.html", username=session.get("username"))
+    return render_template("flappy.html")
 
+@app.route("/submit_flappy_score", methods=["POST"])
+def submit_flappy_score():
+    if "username" not in session:
+        return jsonify({"status":"no_user"})
 
-@app.route("/start", methods=["POST"])
-def start():
-    if not session.get("username"):
-        return jsonify({"error": "Not logged in"}), 401
+    score = request.json.get("score")
+    user = session["username"]
 
-    data = request.json
-    lang = data.get("language", "").strip()
-    difficulty = data.get("difficulty", "").strip()
+    data = load_flappy()
+    data.append({"user":user,"score":score})
 
-    if not lang or not difficulty:
-        return jsonify({"error": "Language and difficulty are required."}), 400
+    data = sorted(data, key=lambda x: x["score"], reverse=True)[:5]
+    save_flappy(data)
 
-    session["language"] = lang
+    return jsonify({"status":"saved"})
 
-    words = get_standard_response(
-        "You are a language tutor. Return ONLY a Python list of words as strings.",
-        f"Give 5 vocab words in {lang} difficulty {difficulty}"
-    )
-
-    questions = get_json_response(
-        """You are a language tutor.
-
-Return EXACTLY this JSON format (valid JSON):
-{
-  "q1": "question text",
-  "q1a": ["ans1","ans2","ans3","ans4"],
-  "q1c": 1,
-
-  "q2": "question text",
-  "q2a": ["ans1","ans2","ans3","ans4"],
-  "q2c": 2,
-
-  "q3": "question text",
-  "q3a": ["ans1","ans2","ans3","ans4"],
-  "q3c": 3,
-
-  "q4": "question text",
-  "q4a": ["ans1","ans2","ans3","ans4"],
-  "q4c": 4,
-
-  "q5": "question text",
-  "q5a": ["ans1","ans2","ans3","ans4"],
-  "q5c": 1
-}
-
-Rules:
-- q#a must always have exactly 4 options.
-- q#c must be an integer 1-4 representing the correct option number.
-- The correct answer positions should not all be the same number.
-""",
-        f"Come up with multiple choice questions with 4 answers only one answer being the correct translation. "
-        f"The questions will ask users to translate English words into {lang} words using this list of words {words}."
-    )
-
-    for i in range(1, 6):
-        if f"q{i}" not in questions or f"q{i}a" not in questions or f"q{i}c" not in questions:
-            return jsonify({"error": "Question generation failed. Please try again."}), 500
-
-    session["questions"] = questions
-    session["difficulty"] = difficulty
-    session["conversation"] = []
-
-    return jsonify(questions)
-
-
-@app.route("/submit", methods=["POST"])
-def submit():
-    if not session.get("username"):
-        return jsonify({"error": "Not logged in"}), 401
-
-    username = session.get("username")
-
-    data = request.json
-    answers = data.get("answers", [])
-    questions = session.get("questions", {})
-    correct = 0
-
-    for i in range(5):
-        q_key = f"q{i+1}"
-        correct_key = f"q{i+1}c"
-
-        chosen = answers[i] if i < len(answers) else None
-        correct_option = questions.get(correct_key)
-
-        session["conversation"].append({
-            "question": questions.get(q_key),
-            "chosen": chosen if chosen is not None else "Nothing was chosen",
-            "correct": str(correct_option)
-        })
-
-        if chosen is not None and str(chosen) == str(correct_option):
-            correct += 1
-
-    user_xp[username] = user_xp.get(username, 0) + correct
-
-    xp = user_xp[username]
-    level = get_level_from_xp(xp)
-    xp_into_level = get_xp_into_level(xp)
-
-    current_index = DIFFICULTIES.index(session["difficulty"])
-    recommended = session["difficulty"]
-
-    if correct <= 1 and current_index > 0:
-        recommended = DIFFICULTIES[current_index - 1]
-    elif correct >= 4 and current_index < len(DIFFICULTIES) - 1:
-        recommended = DIFFICULTIES[current_index + 1]
-
-    leaderboard.append({
-        "user": username,
-        "score": correct,
-        "difficulty": session.get("difficulty"),
-        "language": session.get("language")
-    })
-
-    return jsonify({
-        "correct": correct,
-        "recommended": recommended,
-        "conversation": session["conversation"],
-        "xp": xp,
-        "level": level,
-        "xp_into_level": xp_into_level
-    })
-
+@app.route("/get_flappy_leaderboard")
+def get_flappy_leaderboard():
+    return jsonify(load_flappy())
 
 if __name__ == "__main__":
     app.run(debug=True)
