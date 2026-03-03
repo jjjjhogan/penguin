@@ -1,26 +1,68 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Leaderboard</title>
+    <title>Language Leaderboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
-<h1>🏆 Leaderboard</h1>
+<div class="container">
+    <h1>🏆 Language Leaderboard</h1>
 
-<a href="/">Home</a> | <a href="/play">Play</a>
+    <table>
+        <tr>
+            <th>Rank</th>
+            <th>User</th>
+            <th>XP</th>
+            <th>Level</th>
+        </tr>
+        {% for player in leaderboard %}
+        <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ player.user }}</td>
+            <td>{{ player.xp }}</td>
+            <td>{{ player.level }}</td>
+        </tr>
+        {% endfor %}
+    </table>
 
-<hr>
+    <h2 style="margin-top:50px;">XP Graph</h2>
+    <canvas id="xpChart" width="600" height="400"></canvas>
 
-<ol>
-{% for entry in leaderboard %}
-    <li>
-        <b>{{ entry.username }}</b> — {{ entry.score }}/5 ({{ entry.difficulty }})
-    </li>
-{% else %}
-    <p>No scores yet.</p>
-{% endfor %}
-</ol>
+    <br><br>
+    <a href="/">
+        <button class="main-btn">⬅ Back Home</button>
+    </a>
+</div>
+
+<script>
+fetch("/language_leaderboard_data")
+.then(res => res.json())
+.then(data => {
+    const labels = data.map(p => p.user);
+    const xp = data.map(p => p.xp);
+
+    const ctx = document.getElementById("xpChart").getContext("2d");
+
+    new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "XP",
+                data: xp
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+});
+</script>
 
 </body>
 </html>
-     
