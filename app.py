@@ -168,7 +168,7 @@ def submit_language():
 # LANGUAGE LEADERBOARD
 # =========================
 
-@app.route("/get_language_leaderboard")
+@app.route("/language_leaderboard")
 def get_language_leaderboard():
     return jsonify(load_file(LANG_FILE))
 
