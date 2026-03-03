@@ -5,22 +5,6 @@ import os
 app = Flask(__name__)
 app.secret_key = "penguin_secret"
 
-LANG_FILE = "language_leaderboard.json"
-
-# ========================
-# LOAD / SAVE LANGUAGE DATA
-# ========================
-
-def load_language():
-    if not os.path.exists(LANG_FILE):
-        return []
-    with open(LANG_FILE, "r") as f:
-        return json.load(f)
-
-def save_language(data):
-    with open(LANG_FILE, "w") as f:
-        json.dump(data, f)
-
 # ========================
 # HOME
 # ========================
@@ -38,7 +22,7 @@ def home():
 @app.route("/login", methods=["GET","POST"])
 def login():
     if request.method == "POST":
-        session["username"] = request.form["username"]
+        session["username"] = request.form.get("username")
         return redirect("/")
     return render_template("login.html")
 
@@ -48,24 +32,45 @@ def logout():
     return redirect("/login")
 
 # ========================
-# LANGUAGE LEADERBOARD PAGE
+# LANGUAGE GAME
+# ========================
+
+@app.route("/language")
+def language():
+    if "username" not in session:
+        return redirect("/login")
+    return render_template("index.html")
+
+# ========================
+# FLAPPY GAME
+# ========================
+
+@app.route("/flappy")
+def flappy():
+    if "username" not in session:
+        return redirect("/login")
+    return render_template("flappy.html")
+
+# ========================
+# LANGUAGE LEADERBOARD
 # ========================
 
 @app.route("/language_leaderboard")
 def language_leaderboard():
-    data = load_language()
+    if "username" not in session:
+        return redirect("/login")
+
+    if not os.path.exists("language_leaderboard.json"):
+        data = []
+    else:
+        with open("language_leaderboard.json","r") as f:
+            data = json.load(f)
+
     data = sorted(data, key=lambda x: x["xp"], reverse=True)
+
     return render_template("leaderboard.html", leaderboard=data)
 
 # ========================
-# LANGUAGE LEADERBOARD DATA FOR GRAPH
-# ========================
-
-@app.route("/language_leaderboard_data")
-def language_leaderboard_data():
-    data = load_language()
-    data = sorted(data, key=lambda x: x["xp"], reverse=True)
-    return jsonify(data)
 
 if __name__ == "__main__":
     app.run(debug=True)

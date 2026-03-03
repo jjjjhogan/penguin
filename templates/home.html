@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Penguin Learning Hub</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
 
@@ -13,26 +13,17 @@
 
         <div class="menu">
 
-            <!-- LANGUAGE GAME LINK (FIXED) -->
-            <a href="/language">
-                <button class="main-btn">
-                    🌍 Language Learning Game
-                </button>
-            </a>
+        <a href="{{ url_for('language') }}">
+            <button class="main-btn">🌍 Language Learning Game</button>
+        </a>
 
-            <!-- FLAPPY GAME LINK -->
-            <a href="/flappy">
-                <button class="main-btn">
-                    🐧 Flappy Penguins
-                </button>
-            </a>
+        <a href="{{ url_for('flappy') }}">
+            <button class="main-btn">🐧 Flappy Penguins</button>
+        </a>
 
-            <!-- LANGUAGE LEADERBOARD -->
-            <a href="/language_leaderboard">
-                <button class="main-btn">
-                    🏆 Language Leaderboard
-                </button>
-            </a>
+        <a href="{{ url_for('language_leaderboard') }}">
+            <button class="main-btn">🏆 Language Leaderboard</button>
+        </a>
 
             <!-- LOGOUT -->
             <a href="/logout">
