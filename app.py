@@ -77,7 +77,10 @@ def start_language():
     if "username" not in session:
         return jsonify({"error": "Not logged in"}), 401
 
-    data = request.json
+    data = request.get_json()
+
+    if not data:
+        return jsonify({"error": "No JSON received"}), 400
     language = data.get("language")
     difficulty = data.get("difficulty")
 
