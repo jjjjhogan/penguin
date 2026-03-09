@@ -3,7 +3,7 @@ from os import getenv
 from dotenv import load_dotenv
 from json import loads
 
-
+https://chatgpt.com/share/69af563c-8eb8-8009-aee4-f35b26190e8b
 print("Hi! Welcome to the penguin language app. What kind of language do you want to learn?? What kind of dificulty do you want Easy,Medium, or Hard?")
 response = input()
 
