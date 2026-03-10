@@ -11,10 +11,11 @@ font-size:16px;
 cursor:pointer;
 }
 
-.menu{
-margin-top:40px;
+canvas{
+border:2px solid black;
+background:#dff4ff;
 }
 
-#questions{
-margin-top:20px;
+.menu{
+margin-top:40px;
 }

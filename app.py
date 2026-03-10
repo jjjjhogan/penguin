@@ -2,20 +2,14 @@ from flask import Flask, render_template, request, jsonify, session, redirect
 import json
 import os
 from openai import OpenAI
-from dotenv import load_dotenv
 
-load_dotenv()
 app = Flask(__name__)
 app.secret_key = "penguin_secret_key"
 
-client = OpenAI(api_key=os.getenv('api_key'))
+client = OpenAI()
 
 LANG_FILE = "language_leaderboard.json"
 
-
-# -------------------------
-# LEADERBOARD FILE HELPERS
-# -------------------------
 
 def load_language():
     if not os.path.exists(LANG_FILE):
@@ -33,10 +27,6 @@ def save_language(data):
         json.dump(data, f, indent=2)
 
 
-# -------------------------
-# PAGES
-# -------------------------
-
 @app.route("/")
 def login():
     return render_template("login.html")
@@ -51,6 +41,12 @@ def do_login():
 
     session["username"] = username
     return redirect("/home")
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
 
 
 @app.route("/home")
@@ -69,14 +65,15 @@ def language():
     return render_template("language.html")
 
 
+@app.route("/leaderboard")
+def leaderboard():
+    return render_template("leaderboard.html")
+
+
 @app.route("/flappy")
 def flappy():
     return render_template("flappy.html")
 
-
-# -------------------------
-# START LANGUAGE GAME
-# -------------------------
 
 @app.route("/start_language", methods=["POST"])
 def start_language():
@@ -89,37 +86,27 @@ def start_language():
     language = data.get("language")
     difficulty = data.get("difficulty")
 
-    try:
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        response_format={"type": "json_object"},
+        messages=[
+            {
+                "role": "system",
+                "content": "Return exactly 5 language questions in JSON format {questions:[{question:'',options:['','','',''],answer:0}]}"
+            },
+            {
+                "role": "user",
+                "content": f"Create 5 {difficulty} English to {language} translation questions."
+            }
+        ]
+    )
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Return exactly 5 language multiple choice questions in JSON format: {questions:[{question:'',options:['','','',''],answer:0}]}"
-                },
-                {
-                    "role": "user",
-                    "content": f"Create 5 {difficulty} difficulty English to {language} translation questions."
-                }
-            ]
-        )
+    questions_json = json.loads(response.choices[0].message.content)
 
-        questions_json = json.loads(response.choices[0].message.content)
+    session["questions"] = questions_json["questions"]
 
-        session["questions"] = questions_json["questions"]
+    return jsonify(questions_json)
 
-        return jsonify(questions_json)
-
-    except Exception as e:
-        print("AI ERROR:", e)
-        return jsonify({"error": "AI failed"}), 500
-
-
-# -------------------------
-# SUBMIT ANSWERS
-# -------------------------
 
 @app.route("/submit_language", methods=["POST"])
 def submit_language():
@@ -142,15 +129,9 @@ def submit_language():
 
         if user == correct_answer:
             correct += 1
-            feedback.append({
-                "status": "correct",
-                "correct": q["options"][correct_answer]
-            })
+            feedback.append({"status": "correct"})
         else:
-            feedback.append({
-                "status": "wrong",
-                "correct": q["options"][correct_answer]
-            })
+            feedback.append({"status": "wrong", "correct": q["options"][correct_answer]})
 
     xp = correct
 
@@ -174,10 +155,6 @@ def submit_language():
         "feedback": feedback
     })
 
-
-# -------------------------
-# GET LEADERBOARD
-# -------------------------
 
 @app.route("/language_leaderboard")
 def language_leaderboard():

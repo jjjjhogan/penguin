@@ -1,67 +1,36 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Language Leaderboard</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>Leaderboard</title>
+<link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
 
-<div class="container">
-    <h1>🏆 Language Leaderboard</h1>
+<h1>🏆 Language Leaderboard</h1>
 
-    <table>
-        <tr>
-            <th>Rank</th>
-            <th>User</th>
-            <th>XP</th>
-            <th>Level</th>
-        </tr>
-        {% for player in leaderboard %}
-        <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ player.user }}</td>
-            <td>{{ player.xp }}</td>
-            <td>{{ player.level }}</td>
-        </tr>
-        {% endfor %}
-    </table>
+<ul id="board"></ul>
 
-    <h2 style="margin-top:50px;">XP Graph</h2>
-    <canvas id="xpChart" width="600" height="400"></canvas>
-
-    <br><br>
-    <a href="/">
-        <button class="main-btn">⬅ Back Home</button>
-    </a>
-</div>
+<a href="/home"><button>Home</button></a>
 
 <script>
-fetch("/language_leaderboard_data")
-.then(res => res.json())
-.then(data => {
-    const labels = data.map(p => p.user);
-    const xp = data.map(p => p.xp);
 
-    const ctx = document.getElementById("xpChart").getContext("2d");
+async function loadBoard(){
 
-    new Chart(ctx, {
-        type: "bar",
-        data: {
-            labels: labels,
-            datasets: [{
-                label: "XP",
-                data: xp
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { display: false }
-            }
-        }
-    });
-});
+const res = await fetch("/language_leaderboard")
+const data = await res.json()
+
+let html=""
+
+Object.entries(data).forEach(([user,stats])=>{
+html += `<li>${user} — Level ${stats.level} (${stats.xp} XP)</li>`
+})
+
+document.getElementById("board").innerHTML = html
+}
+
+loadBoard()
+
 </script>
 
 </body>
