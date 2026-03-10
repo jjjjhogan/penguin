@@ -1,26 +1,21 @@
-from flask import Flask, render_template, request, session, redirect, jsonify
-from openai import OpenAI
-from dotenv import load_dotenv
-from os import getenv
+from flask import Flask, render_template, request, jsonify, session, redirect
 import json
 import os
-
-# ========================
-# SETUP
-# ========================
-
-app = Flask(__name__)
-app.secret_key = "penguin_secret"
+from openai import OpenAI
+from dotenv import load_dotenv
 
 load_dotenv()
-client = OpenAI(api_key=getenv("api_key"))
+app = Flask(__name__)
+app.secret_key = "penguin_secret_key"
+
+client = OpenAI(api_key=os.getenv('api_key'))
 
 LANG_FILE = "language_leaderboard.json"
 
-# ========================
-# HELPER FUNCTIONS
-# ========================
 
+# -------------------------
+# LEADERBOARD FILE HELPERS
+# -------------------------
 
 def load_language():
     if not os.path.exists(LANG_FILE):
@@ -34,76 +29,79 @@ def load_language():
 
 
 def save_language(data):
-    try:
-        with open(LANG_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-    except Exception as e:
-        print("Error saving leaderboard:", e)
-# ========================
-# HOME
-# ========================
+    with open(LANG_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+# -------------------------
+# PAGES
+# -------------------------
 
 @app.route("/")
-def home():
-    if "username" not in session:
-        return redirect("/login")
-    return render_template("home.html", username=session["username"])
-
-# ========================
-# LOGIN
-# ========================
-
-@app.route("/login", methods=["GET","POST"])
 def login():
-    if request.method == "POST":
-        session["username"] = request.form.get("username")
-        return redirect("/")
     return render_template("login.html")
 
-@app.route("/logout")
-def logout():
-    session.clear()
-    return redirect("/login")
 
-# ========================
-# LANGUAGE PAGE
-# ========================
+@app.route("/login", methods=["POST"])
+def do_login():
+    username = request.form.get("username")
+
+    if not username:
+        return redirect("/")
+
+    session["username"] = username
+    return redirect("/home")
+
+
+@app.route("/home")
+def home():
+    if "username" not in session:
+        return redirect("/")
+
+    return render_template("home.html", username=session["username"])
+
 
 @app.route("/language")
 def language():
     if "username" not in session:
-        return redirect("/login")
-    return render_template("index.html")
+        return redirect("/")
 
-# ========================
+    return render_template("language.html")
+
+
+@app.route("/flappy")
+def flappy():
+    return render_template("flappy.html")
+
+
+# -------------------------
 # START LANGUAGE GAME
-# ========================
+# -------------------------
 
 @app.route("/start_language", methods=["POST"])
 def start_language():
 
     if "username" not in session:
-        return jsonify({"error": "Not logged in"}), 401
+        return jsonify({"error": "not logged in"}), 401
 
     data = request.get_json()
 
-    if not data:
-        return jsonify({"error": "No JSON received"}), 400
     language = data.get("language")
     difficulty = data.get("difficulty")
 
     try:
+
         response = client.chat.completions.create(
             model="gpt-4o",
             response_format={"type": "json_object"},
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a language tutor. Return exactly 5 multiple choice questions in JSON format with this structure: { 'questions': [ { 'question': '', 'options': ['a','b','c','d'], 'answer': 0 } ] }"
+                    "content": "Return exactly 5 language multiple choice questions in JSON format: {questions:[{question:'',options:['','','',''],answer:0}]}"
                 },
                 {
                     "role": "user",
-                    "content": f"Create 5 {difficulty} difficulty vocabulary translation questions translating English into {language}."
+                    "content": f"Create 5 {difficulty} difficulty English to {language} translation questions."
                 }
             ]
         )
@@ -115,97 +113,76 @@ def start_language():
         return jsonify(questions_json)
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("AI ERROR:", e)
+        return jsonify({"error": "AI failed"}), 500
 
-# ========================
-# SUBMIT LANGUAGE ANSWERS
-# ========================
+
+# -------------------------
+# SUBMIT ANSWERS
+# -------------------------
 
 @app.route("/submit_language", methods=["POST"])
 def submit_language():
 
-    if "username" not in session:
-        return jsonify({"error": "Not logged in"}), 401
+    if "questions" not in session:
+        return jsonify({"error": "no questions"}), 400
 
-    user_answers = request.json.get("answers")
-    questions = session.get("questions")
+    data = request.get_json()
+    answers = data.get("answers", [])
 
-    if not questions:
-        return jsonify({"error": "No active game"}), 400
+    questions = session["questions"]
 
-    correct_count = 0
+    correct = 0
     feedback = []
 
-    for i, question in enumerate(questions):
-        correct_index = question["answer"]
-        user_index = user_answers[i]
+    for i, q in enumerate(questions):
 
-        if user_index == correct_index:
-            correct_count += 1
+        user = answers[i] if i < len(answers) else -1
+        correct_answer = q["answer"]
+
+        if user == correct_answer:
+            correct += 1
             feedback.append({
-                "question": question["question"],
-                "status": "correct"
+                "status": "correct",
+                "correct": q["options"][correct_answer]
             })
         else:
             feedback.append({
-                "question": question["question"],
-                "status": "incorrect",
-                "correct_answer": question["options"][correct_index]
+                "status": "wrong",
+                "correct": q["options"][correct_answer]
             })
 
-    # XP system (1 XP per correct answer)
-    xp_gained = correct_count
+    xp = correct
 
     leaderboard = load_language()
+    username = session["username"]
 
-    user_found = False
-    for player in leaderboard:
-        if player["user"] == session["username"]:
-            player["xp"] += xp_gained
-            player["level"] = player["xp"] // 20
-            user_found = True
-            break
+    if username not in leaderboard:
+        leaderboard[username] = {"xp": 0, "level": 1}
 
-    if not user_found:
-        leaderboard.append({
-            "user": session["username"],
-            "xp": xp_gained,
-            "level": xp_gained // 20
-        })
+    leaderboard[username]["xp"] += xp
+
+    while leaderboard[username]["xp"] >= 20:
+        leaderboard[username]["xp"] -= 20
+        leaderboard[username]["level"] += 1
 
     save_language(leaderboard)
 
     return jsonify({
-        "correct": correct_count,
-        "xp_gained": xp_gained,
+        "correct": correct,
+        "xp": xp,
         "feedback": feedback
     })
 
-# ========================
-# FLAPPY PAGE
-# ========================
 
-@app.route("/flappy")
-def flappy():
-    if "username" not in session:
-        return redirect("/login")
-    return render_template("flappy.html")
-
-# ========================
-# LANGUAGE LEADERBOARD
-# ========================
+# -------------------------
+# GET LEADERBOARD
+# -------------------------
 
 @app.route("/language_leaderboard")
 def language_leaderboard():
-    if "username" not in session:
-        return redirect("/login")
+    return jsonify(load_language())
 
-    leaderboard = load_language()
-    leaderboard = sorted(leaderboard, key=lambda x: x["xp"], reverse=True)
-
-    return render_template("leaderboard.html", leaderboard=leaderboard)
-
-# ========================
 
 if __name__ == "__main__":
     app.run(debug=True)

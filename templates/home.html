@@ -1,40 +1,25 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Penguin Learning Hub</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<title>Penguin Home</title>
+<link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
 
-    <div class="container">
+<h1>Welcome {{username}}</h1>
 
-        <h1>🐧 Arctic Learning Hub</h1>
-        <h2>Welcome, {{ username }}!</h2>
+<div class="menu">
 
-        <div class="menu">
+<a href="/language">
+<button>🌎 Language Learning</button>
+</a>
 
-        <a href="{{ url_for('language') }}">
-            <button class="main-btn">🌍 Language Learning Game</button>
-        </a>
+<a href="/flappy">
+<button>🐧 Flappy Penguins</button>
+</a>
 
-        <a href="{{ url_for('flappy') }}">
-            <button class="main-btn">🐧 Flappy Penguins</button>
-        </a>
-
-        <a href="{{ url_for('language_leaderboard') }}">
-            <button class="main-btn">🏆 Language Leaderboard</button>
-        </a>
-
-            <!-- LOGOUT -->
-            <a href="/logout">
-                <button class="logout-btn">
-                    🚪 Logout
-                </button>
-            </a>
-
-        </div>
-
-    </div>
+</div>
 
 </body>
 </html>
