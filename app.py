@@ -21,16 +21,24 @@ LANG_FILE = "language_leaderboard.json"
 # HELPER FUNCTIONS
 # ========================
 
+
 def load_language():
     if not os.path.exists(LANG_FILE):
-        return []
-    with open(LANG_FILE, "r") as f:
-        return json.load(f)
+        return {}
+
+    try:
+        with open(LANG_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {}
+
 
 def save_language(data):
-    with open(LANG_FILE, "w") as f:
-        json.dump(data, f)
-
+    try:
+        with open(LANG_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        print("Error saving leaderboard:", e)
 # ========================
 # HOME
 # ========================
