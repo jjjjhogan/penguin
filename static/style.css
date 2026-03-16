@@ -19,3 +19,17 @@ background:#dff4ff;
 .menu{
 margin-top:40px;
 }
+table{
+margin:auto;
+border-collapse:collapse;
+width:60%;
+}
+
+th,td{
+border:1px solid black;
+padding:10px;
+}
+
+th{
+background:#bfefff;
+}

@@ -161,9 +161,10 @@ def submit_language():
     })
 
 
-@app.route("/language_leaderboard")
+@app.route("/language_leaderboard", methods=["GET"])
 def language_leaderboard():
-    return jsonify(load_language())
+    leaderboard = load_language()
+    return jsonify(leaderboard)
 
 
 if __name__ == "__main__":
