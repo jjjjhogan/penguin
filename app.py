@@ -21,7 +21,7 @@ def load_language():
 
     try:
         with open(LANG_FILE, "r") as f:
-            return json.loads(f)
+            return json.load(f)
     except:
         return {}
 
