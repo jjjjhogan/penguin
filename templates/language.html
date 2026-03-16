@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Language Game</title>
+<title>Language Learning</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
 
-<h1>🌎 Language Game</h1>
+<h1>🌎 Language Learning Game</h1>
+
+<div>
 
 <select id="language">
 <option>Spanish</option>
@@ -22,90 +24,114 @@
 <option>hard</option>
 </select>
 
-<button onclick="startGame()">Start</button>
+<button onclick="startGame()">Start Game</button>
+
+</div>
+
+<hr>
 
 <div id="questions"></div>
 
-<button onclick="submitAnswers()">Submit</button>
+<br>
 
-<h2>Leaderboard</h2>
-<ul id="leaderboard"></ul>
+<button onclick="submitAnswers()">Submit Answers</button>
+
+<p id="result"></p>
+
+<br>
+
+<a href="/home">
+<button>🏠 Home</button>
+</a>
+
+<a href="/leaderboard">
+<button>🏆 Leaderboard</button>
+</a>
 
 <script>
 
-let questions=[]
+let questions = []
 
 async function startGame(){
 
-const language=document.getElementById("language").value
-const difficulty=document.getElementById("difficulty").value
+const language = document.getElementById("language").value
+const difficulty = document.getElementById("difficulty").value
 
-const res=await fetch("/start_language",{
+const res = await fetch("/start_language",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({language,difficulty})
 })
 
-const data=await res.json()
+if(!res.ok){
+alert("Failed to start game")
+return
+}
 
-questions=data.questions
+const data = await res.json()
 
-let html=""
+questions = data.questions
+
+let html = ""
 
 data.questions.forEach((q,i)=>{
 
-html+=`<div>
-<p>${q.question}</p>
+html += `<div>
+
+<p><b>${i+1}. ${q.question}</b></p>
+
 ${q.options.map((o,j)=>`
 <label>
 <input type="radio" name="q${i}" value="${j}">
 ${o}
-</label><br>`).join("")}
-</div>`
+</label><br>
+`).join("")}
+
+</div><hr>`
+
 })
 
-document.getElementById("questions").innerHTML=html
+document.getElementById("questions").innerHTML = html
+
 }
 
 async function submitAnswers(){
 
-let answers=[]
+let answers = []
 
 questions.forEach((q,i)=>{
 
-let selected=document.querySelector(`input[name="q${i}"]:checked`)
-answers.push(selected?parseInt(selected.value):-1)
+let selected = document.querySelector(`input[name="q${i}"]:checked`)
+
+answers.push(selected ? parseInt(selected.value) : -1)
 
 })
 
-const res=await fetch("/submit_language",{
+try{
+
+const res = await fetch("/submit_language",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({answers})
 })
 
-const data=await res.json()
-
-alert(`You got ${data.correct}/5 and earned ${data.xp} XP`)
-
-loadLeaderboard()
+if(!res.ok){
+throw new Error("Server returned "+res.status)
 }
 
-async function loadLeaderboard(){
+const data = await res.json()
 
-const res=await fetch("/language_leaderboard")
-const data=await res.json()
+document.getElementById("result").innerText =
+`You got ${data.correct}/5 correct and earned ${data.xp} XP!`
 
-let html=""
+}catch(err){
 
-Object.entries(data).forEach(([user,stats])=>{
-html+=`<li>${user} — Level ${stats.level} (${stats.xp} XP)</li>`
-})
+console.error("Submit error:",err)
+alert("Error submitting answers")
 
-document.getElementById("leaderboard").innerHTML=html
 }
 
-loadLeaderboard()
+}
 
 </script>
 
