@@ -1,1 +1,6 @@
-[{"user": "eric", "xp": 5, "level": 0}]
+{
+  "john": {
+    "xp": 4,
+    "level": 1
+  }
+}

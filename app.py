@@ -2,11 +2,15 @@ from flask import Flask, render_template, request, jsonify, session, redirect
 import json
 import os
 from openai import OpenAI
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "penguin_secret_key"
 
-client = OpenAI()
+client = OpenAI(api_key=os.getenv('api_key'))
 
 LANG_FILE = "language_leaderboard.json"
 
@@ -17,7 +21,7 @@ def load_language():
 
     try:
         with open(LANG_FILE, "r") as f:
-            return json.load(f)
+            return json.loads(f)
     except:
         return {}
 
@@ -134,8 +138,9 @@ def submit_language():
             feedback.append({"status": "wrong", "correct": q["options"][correct_answer]})
 
     xp = correct
-
     leaderboard = load_language()
+    print('debug: ' +str(type(leaderboard)))
+    print(leaderboard)
     username = session["username"]
 
     if username not in leaderboard:
