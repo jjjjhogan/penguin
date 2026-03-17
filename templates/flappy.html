@@ -28,25 +28,29 @@ let pipes
 let score
 let gameOver
 
-const gravity = 0.15
-const jump = -4
-const gap = 200
+const gravity = 0.12
+const jumpPower = -4
+const gap = 230
 
 function start(){
 
-penguin = {x:80,y:200,w:30,h:30,vel:0}
+penguin = {
+x:80,
+y:200,
+w:34,
+h:34,
+vel:0
+}
 
 pipes=[]
-
 score=0
-
 gameOver=false
 
 }
 
 function spawnPipe(){
 
-let top = Math.random()*200+50
+let top = Math.random()*180 + 50
 
 pipes.push({
 x:canvas.width,
@@ -62,34 +66,89 @@ function update(){
 
 if(gameOver) return
 
-penguin.vel+=gravity
-penguin.y+=penguin.vel
+penguin.vel += gravity
+penguin.y += penguin.vel
 
-if(penguin.y>canvas.height) gameOver=true
+if(penguin.y > canvas.height) gameOver = true
 
 pipes.forEach(p=>{
 
-p.x-=2
+p.x -= 2
 
-if(!p.passed && p.x< penguin.x){
-p.passed=true
+if(!p.passed && p.x < penguin.x){
+p.passed = true
 score++
-document.getElementById("score").innerText="Score: "+score
+document.getElementById("score").innerText = "Score: " + score
 }
 
 if(
-penguin.x < p.x+p.w &&
-penguin.x+penguin.w > p.x &&
-(penguin.y < p.top || penguin.y+penguin.h > p.bottom)
+penguin.x < p.x + p.w &&
+penguin.x + penguin.w > p.x &&
+(penguin.y < p.top || penguin.y + penguin.h > p.bottom)
 ){
-gameOver=true
+gameOver = true
 }
 
 })
 
-pipes=pipes.filter(p=>p.x+p.w>0)
+pipes = pipes.filter(p=>p.x + p.w > 0)
 
-if(Math.random()<0.02) spawnPipe()
+if(Math.random() < 0.02) spawnPipe()
+
+}
+
+function drawPenguin(){
+
+// body
+ctx.fillStyle = "black"
+ctx.beginPath()
+ctx.arc(penguin.x+17, penguin.y+17, 17, 0, Math.PI*2)
+ctx.fill()
+
+// belly
+ctx.fillStyle = "white"
+ctx.beginPath()
+ctx.arc(penguin.x+17, penguin.y+20, 10, 0, Math.PI*2)
+ctx.fill()
+
+// eye
+ctx.fillStyle = "white"
+ctx.beginPath()
+ctx.arc(penguin.x+22, penguin.y+12, 4, 0, Math.PI*2)
+ctx.fill()
+
+ctx.fillStyle = "black"
+ctx.beginPath()
+ctx.arc(penguin.x+23, penguin.y+12, 2, 0, Math.PI*2)
+ctx.fill()
+
+// beak
+ctx.fillStyle = "orange"
+ctx.beginPath()
+ctx.moveTo(penguin.x+30,penguin.y+18)
+ctx.lineTo(penguin.x+38,penguin.y+21)
+ctx.lineTo(penguin.x+30,penguin.y+24)
+ctx.fill()
+
+}
+
+function drawIciclePipe(x,y,width,height){
+
+ctx.fillStyle = "#bfefff"
+ctx.fillRect(x,y,width,height)
+
+// icicle spikes
+for(let i=0;i<width;i+=12){
+
+ctx.beginPath()
+
+ctx.moveTo(x+i,y+height)
+ctx.lineTo(x+i+6,y+height+12)
+ctx.lineTo(x+i+12,y+height)
+
+ctx.fill()
+
+}
 
 }
 
@@ -97,22 +156,22 @@ function draw(){
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
 
-ctx.fillStyle="black"
-ctx.fillRect(penguin.x,penguin.y,penguin.w,penguin.h)
-
-ctx.fillStyle="#9be7ff"
+drawPenguin()
 
 pipes.forEach(p=>{
 
-ctx.fillRect(p.x,0,p.w,p.top)
-ctx.fillRect(p.x,p.bottom,p.w,canvas.height-p.bottom)
+// top icicle
+drawIciclePipe(p.x,0,p.w,p.top)
+
+// bottom icicle
+drawIciclePipe(p.x,p.bottom,p.w,canvas.height-p.bottom)
 
 })
 
 if(gameOver){
 
 ctx.fillStyle="red"
-ctx.font="30px Arial"
+ctx.font="32px Arial"
 ctx.fillText("Game Over",120,250)
 
 }
@@ -123,25 +182,22 @@ function loop(){
 
 update()
 draw()
-
 requestAnimationFrame(loop)
 
 }
 
 document.addEventListener("keydown",e=>{
 if(e.code==="Space"){
-penguin.vel=jump
+penguin.vel = jumpPower
 }
 })
 
 canvas.addEventListener("mousedown",()=>{
-penguin.vel=jump
+penguin.vel = jumpPower
 })
 
 function restart(){
-
 start()
-
 }
 
 start()
