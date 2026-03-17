@@ -32,15 +32,18 @@ const gravity = 0.12
 const jumpPower = -4
 
 const penguinSize = 34
-const minGap = penguinSize * 3   // required gap
+const minGap = penguinSize * 3
 
-const pipeWidth = 40              // smaller pipes
+const pipeWidth = 36
 const pipeSpeed = 2
+
+const pipeSpacing = 180   // horizontal spacing between pipes
 
 const fps = 120
 const frameDelay = 1000 / fps
 
 let lastTime = 0
+let frameCount = 0
 
 function start(){
 
@@ -55,12 +58,15 @@ vel:0
 pipes=[]
 score=0
 gameOver=false
+frameCount=0
+
+spawnPipe()
 
 }
 
 function spawnPipe(){
 
-const margin = 40
+const margin = 50
 
 let topHeight = Math.random() * (canvas.height - minGap - margin*2) + margin
 
@@ -77,6 +83,8 @@ passed:false
 function update(){
 
 if(gameOver) return
+
+frameCount++
 
 penguin.vel += gravity
 penguin.y += penguin.vel
@@ -106,7 +114,10 @@ gameOver = true
 
 pipes = pipes.filter(p=>p.x + p.w > 0)
 
-if(Math.random() < 0.02){
+// spawn new pipe when last pipe moves far enough
+let lastPipe = pipes[pipes.length-1]
+
+if(lastPipe && lastPipe.x < canvas.width - pipeSpacing){
 spawnPipe()
 }
 
