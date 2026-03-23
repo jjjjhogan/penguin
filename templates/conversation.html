@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Conversation Mode</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<h1>🗣️ Conversation Mode</h1>
+
+<select id="language">
+<option>Spanish</option>
+<option>French</option>
+<option>German</option>
+<option>Japanese</option>
+</select>
+
+<button onclick="startConversation()">Start</button>
+
+<div id="prompts"></div>
+
+<button onclick="submitAnswers()">Submit</button>
+
+<div id="results"></div>
+
+<br>
+<a href="/home"><button>🏠 Home</button></a>
+
+<script>
+
+let prompts = []
+
+async function startConversation(){
+
+const language = document.getElementById("language").value
+
+const res = await fetch("/start_conversation",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({language})
+})
+
+const data = await res.json()
+
+prompts = data.prompts
+
+let html=""
+
+prompts.forEach((p,i)=>{
+
+html += `
+<div>
+<p><b>${p.english}</b></p>
+<textarea id="answer${i}" rows="2" cols="40"></textarea>
+</div><hr>
+`
+
+})
+
+document.getElementById("prompts").innerHTML = html
+}
+
+async function submitAnswers(){
+
+let answers = []
+
+prompts.forEach((p,i)=>{
+answers.push(document.getElementById(`answer${i}`).value)
+})
+
+const res = await fetch("/submit_conversation",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({answers})
+})
+
+const data = await res.json()
+
+let html=""
+
+data.results.forEach((r,i)=>{
+
+html += `
+<div>
+<p><b>Score:</b> ${r.score}/10</p>
+<p><b>Feedback:</b> ${r.feedback}</p>
+<p><b>Correction:</b> ${r.correction}</p>
+</div><hr>
+`
+
+})
+
+document.getElementById("results").innerHTML = html
+}
+
+</script>
+
+</body>
+</html>

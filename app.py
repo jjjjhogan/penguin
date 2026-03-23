@@ -166,6 +166,76 @@ def language_leaderboard():
     leaderboard = load_language()
     return jsonify(leaderboard)
 
+@app.route("/start_conversation", methods=["POST"])
+def start_conversation():
+
+    data = request.get_json()
+    language = data.get("language")
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        response_format={"type": "json_object"},
+        messages=[
+            {
+                "role": "system",
+                "content": "Return 5 conversation prompts in JSON: {prompts:[{english:'', target:''}]}"
+            },
+            {
+                "role": "user",
+                "content": f"Create 5 conversational sentences translating English into {language}. Make them longer sentences."
+            }
+        ]
+    )
+
+    prompts = json.loads(response.choices[0].message.content)
+
+    session["conversation"] = prompts["prompts"]
+
+    return jsonify(prompts)
+
+@app.route("/submit_conversation", methods=["POST"])
+def submit_conversation():
+
+    if "conversation" not in session:
+        return jsonify({"error": "no prompts"}), 400
+
+    data = request.get_json()
+    answers = data.get("answers", [])
+
+    prompts = session["conversation"]
+
+    results = []
+
+    for i, p in enumerate(prompts):
+
+        user_answer = answers[i] if i < len(answers) else ""
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Grade the sentence from 0-10. Return JSON: {score: number, feedback: '', correction: ''}"
+                },
+                {
+                    "role": "user",
+                    "content": f"""
+Prompt: {p['english']}
+Correct answer: {p['target']}
+User answer: {user_answer}
+"""
+                }
+            ]
+        )
+
+        grade = json.loads(response.choices[0].message.content)
+        results.append(grade)
+
+    return jsonify({"results": results})
+
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
