@@ -234,7 +234,11 @@ User answer: {user_answer}
 
     return jsonify({"results": results})
 
-
+@app.route("/conversation")
+def conversation():
+    if "username" not in session:
+        return redirect("/")
+    return render_template("conversation.html")
 
 
 if __name__ == "__main__":
