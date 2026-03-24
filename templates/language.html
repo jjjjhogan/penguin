@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Conversation Mode</title>
+<title>Language Learning</title>
 <link rel="stylesheet" href="/static/style.css">
 </head>
 
 <body>
 
-<h1>🗣️ Conversation Mode</h1>
+<h1>🌎 Language Learning Game</h1>
 
 <div>
 
@@ -19,24 +19,25 @@
 </select>
 
 <select id="difficulty">
+<option value="no-brainer">No-Brainer 😄</option>
 <option value="easy">Easy</option>
 <option value="medium">Medium</option>
 <option value="hard">Hard</option>
 </select>
 
-<button onclick="startConversation()">Start Conversation</button>
+<button onclick="startGame()">Start Game</button>
 
 </div>
 
 <hr>
 
-<div id="prompts"></div>
+<div id="questions"></div>
 
 <br>
 
-<button onclick="submitAnswers()">Submit Responses</button>
+<button onclick="submitAnswers()">Submit Answers</button>
 
-<div id="results"></div>
+<p id="result"></p>
 
 <br>
 
@@ -50,46 +51,47 @@
 
 <script>
 
-let prompts = []
+let questions = []
 
-async function startConversation(){
+async function startGame(){
 
 const language = document.getElementById("language").value
 const difficulty = document.getElementById("difficulty").value
 
-const res = await fetch("/start_conversation",{
+const res = await fetch("/start_language",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({language, difficulty})
 })
 
 if(!res.ok){
-alert("Failed to start conversation")
+alert("Failed to start game")
 return
 }
-
 const data = await res.json()
 
-prompts = data.prompts
+questions = data.questions
 
 let html=""
 
-prompts.forEach((p,i)=>{
+data.questions.forEach((q,i)=>{
 
-html += `
-<div>
+html += `<div>
 
-<p><b>${i+1}. ${p.english}</b></p>
+<p><b>${i+1}. ${q.question}</b></p>
 
-<textarea id="answer${i}" rows="3" cols="50" placeholder="Type your answer here..."></textarea>
+${q.options.map((o,j)=>`
+<label>
+<input type="radio" name="q${i}" value="${j}">
+${o}
+</label><br>
+`).join("")}
 
-</div>
-<hr>
-`
+</div><hr>`
 
 })
 
-document.getElementById("prompts").innerHTML = html
+document.getElementById("questions").innerHTML = html
 
 }
 
@@ -97,48 +99,35 @@ async function submitAnswers(){
 
 let answers = []
 
-prompts.forEach((p,i)=>{
-answers.push(document.getElementById(`answer${i}`).value)
+questions.forEach((q,i)=>{
+
+let selected = document.querySelector(`input[name="q${i}"]:checked`)
+
+answers.push(selected ? parseInt(selected.value) : -1)
+
 })
 
 try{
 
-const res = await fetch("/submit_conversation",{
+const res = await fetch("/submit_language",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({answers})
 })
 
 if(!res.ok){
-throw new Error("Server error " + res.status)
+throw new Error("Server returned "+res.status)
 }
 
 const data = await res.json()
 
-let html=""
-
-data.results.forEach((r,i)=>{
-
-html += `
-<div>
-
-<p><b>Question ${i+1}</b></p>
-<p><b>Score:</b> ${r.score}/10</p>
-<p><b>Feedback:</b> ${r.feedback}</p>
-<p><b>Correction:</b> ${r.correction}</p>
-
-</div>
-<hr>
-`
-
-})
-
-document.getElementById("results").innerHTML = html
+document.getElementById("result").innerText =
+`You got ${data.correct}/5 correct and earned ${data.xp} XP!`
 
 }catch(err){
 
-console.error("Submit error:", err)
-alert("Error submitting responses")
+console.error("Submit error:",err)
+alert("Error submitting answers")
 
 }
 
