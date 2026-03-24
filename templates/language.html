@@ -58,31 +58,43 @@ async function startGame(){
 const language = document.getElementById("language").value
 const difficulty = document.getElementById("difficulty").value
 
-const res = await fetch("/start_conversation",{
+const res = await fetch("/start_language",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({language, difficulty})
 })
 
+if(!res.ok){
+alert("Failed to start game")
+return
+}
 const data = await res.json()
 
-prompts = data.prompts
+questions = data.questions
 
 let html=""
 
-prompts.forEach((p,i)=>{
+data.questions.forEach((q,i)=>{
 
-html += `
-<div>
-<p><b>${p.english}</b></p>
-<textarea id="answer${i}" rows="2" cols="40"></textarea>
-</div><hr>
-`
+html += `<div>
+
+<p><b>${i+1}. ${q.question}</b></p>
+
+${q.options.map((o,j)=>`
+<label>
+<input type="radio" name="q${i}" value="${j}">
+${o}
+</label><br>
+`).join("")}
+
+</div><hr>`
 
 })
 
-document.getElementById("prompts").innerHTML = html
-}   
+document.getElementById("questions").innerHTML = html
+
+}
+
 async function submitAnswers(){
 
 let answers = []
