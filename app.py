@@ -78,7 +78,6 @@ def leaderboard():
 def flappy():
     return render_template("flappy.html")
 
-
 @app.route("/start_language", methods=["POST"])
 def start_language():
 
@@ -86,9 +85,14 @@ def start_language():
         return jsonify({"error": "not logged in"}), 401
 
     data = request.get_json()
-
     language = data.get("language")
     difficulty = data.get("difficulty")
+
+    # 👇 Make No-Brainer easier
+    if difficulty == "no-brainer":
+        prompt_text = f"Create 5 VERY EASY beginner English to {language} translation questions. Use simple words like cat, dog, house."
+    else:
+        prompt_text = f"Create 5 {difficulty} difficulty English to {language} translation questions."
 
     response = client.chat.completions.create(
         model="gpt-4o",
@@ -96,11 +100,11 @@ def start_language():
         messages=[
             {
                 "role": "system",
-                "content": "Return exactly 5 language questions in JSON format {questions:[{question:'',options:['','','',''],answer:0}]}"
+                "content": "Return JSON: {questions:[{question:'',options:['','','',''],answer:0}]}"
             },
             {
                 "role": "user",
-                "content": f"Create 5 {difficulty} English to {language} translation questions."
+                "content": prompt_text
             }
         ]
     )
@@ -110,7 +114,6 @@ def start_language():
     session["questions"] = questions_json["questions"]
 
     return jsonify(questions_json)
-
 
 @app.route("/submit_language", methods=["POST"])
 def submit_language():

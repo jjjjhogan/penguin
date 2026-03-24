@@ -19,9 +19,10 @@
 </select>
 
 <select id="difficulty">
-<option>easy</option>
-<option>medium</option>
-<option>hard</option>
+<option value="no-brainer">No-Brainer 😄</option>
+<option value="easy">Easy</option>
+<option value="medium">Medium</option>
+<option value="hard">Hard</option>
 </select>
 
 <button onclick="startGame()">Start Game</button>
@@ -57,44 +58,31 @@ async function startGame(){
 const language = document.getElementById("language").value
 const difficulty = document.getElementById("difficulty").value
 
-const res = await fetch("/start_language",{
+const res = await fetch("/start_conversation",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify({language,difficulty})
+body:JSON.stringify({language, difficulty})
 })
-
-if(!res.ok){
-alert("Failed to start game")
-return
-}
 
 const data = await res.json()
 
-questions = data.questions
+prompts = data.prompts
 
-let html = ""
+let html=""
 
-data.questions.forEach((q,i)=>{
+prompts.forEach((p,i)=>{
 
-html += `<div>
-
-<p><b>${i+1}. ${q.question}</b></p>
-
-${q.options.map((o,j)=>`
-<label>
-<input type="radio" name="q${i}" value="${j}">
-${o}
-</label><br>
-`).join("")}
-
-</div><hr>`
+html += `
+<div>
+<p><b>${p.english}</b></p>
+<textarea id="answer${i}" rows="2" cols="40"></textarea>
+</div><hr>
+`
 
 })
 
-document.getElementById("questions").innerHTML = html
-
-}
-
+document.getElementById("prompts").innerHTML = html
+}   
 async function submitAnswers(){
 
 let answers = []
