@@ -172,29 +172,47 @@ def language_leaderboard():
 @app.route("/start_conversation", methods=["POST"])
 def start_conversation():
 
+    if "username" not in session:
+        return jsonify({"error": "not logged in"}), 401
+
     data = request.get_json()
     language = data.get("language")
+    difficulty = data.get("difficulty")
 
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        response_format={"type": "json_object"},
-        messages=[
-            {
-                "role": "system",
-                "content": "Return 5 conversation prompts in JSON: {prompts:[{english:'', target:''}]}"
-            },
-            {
-                "role": "user",
-                "content": f"Create 5 conversational sentences translating English into {language}. Make them longer sentences."
-            }
-        ]
-    )
+    # difficulty control
+    if difficulty == "easy":
+        instruction = "short simple sentences"
+    elif difficulty == "medium":
+        instruction = "medium conversational sentences"
+    else:
+        instruction = "long detailed conversational sentences"
 
-    prompts = json.loads(response.choices[0].message.content)
+    try:
 
-    session["conversation"] = prompts["prompts"]
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Return JSON: {prompts:[{english:'', target:''}]}"
+                },
+                {
+                    "role": "user",
+                    "content": f"Create 5 {instruction} translating English into {language}."
+                }
+            ]
+        )
 
-    return jsonify(prompts)
+        prompts = json.loads(response.choices[0].message.content)
+
+        session["conversation"] = prompts["prompts"]
+
+        return jsonify(prompts)
+
+    except Exception as e:
+        print("Conversation error:", e)
+        return jsonify({"error": "AI failed"}), 500
 
 @app.route("/submit_conversation", methods=["POST"])
 def submit_conversation():
@@ -209,33 +227,39 @@ def submit_conversation():
 
     results = []
 
-    for i, p in enumerate(prompts):
+    try:
 
-        user_answer = answers[i] if i < len(answers) else ""
+        for i, p in enumerate(prompts):
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            response_format={"type": "json_object"},
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Grade the sentence from 0-10. Return JSON: {score: number, feedback: '', correction: ''}"
-                },
-                {
-                    "role": "user",
-                    "content": f"""
-Prompt: {p['english']}
-Correct answer: {p['target']}
-User answer: {user_answer}
+            user_answer = answers[i] if i < len(answers) else ""
+
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Grade from 0-10. Return JSON: {score: number, feedback: '', correction: ''}"
+                    },
+                    {
+                        "role": "user",
+                        "content": f"""
+English: {p['english']}
+Correct: {p['target']}
+User: {user_answer}
 """
-                }
-            ]
-        )
+                    }
+                ]
+            )
 
-        grade = json.loads(response.choices[0].message.content)
-        results.append(grade)
+            grade = json.loads(response.choices[0].message.content)
+            results.append(grade)
 
-    return jsonify({"results": results})
+        return jsonify({"results": results})
+
+    except Exception as e:
+        print("Grading error:", e)
+        return jsonify({"error": "grading failed"}), 500
 
 @app.route("/conversation")
 def conversation():
