@@ -115,30 +115,73 @@ def start_language():
 
     return jsonify(questions_json)
 
-@app.route("/submit_language", methods=["POST"])
-def submit_language():
+@app.route("/submit_conversation", methods=["POST"])
+def submit_conversation():
 
-    if "questions" not in session:
-        return jsonify({"error": "no questions"}), 400
+    if "conversation" not in session:
+        return jsonify({"error": "no prompts"}), 400
 
     data = request.get_json()
     answers = data.get("answers", [])
 
-    questions = session["questions"]
+    prompts = session["conversation"]
 
-    correct = 0
-    feedback = []
+    results = []
 
-    for i, q in enumerate(questions):
+    try:
 
-        user = answers[i] if i < len(answers) else -1
-        correct_answer = q["answer"]
+        for i, p in enumerate(prompts):
 
-        if user == correct_answer:
-            correct += 1
-            feedback.append({"status": "correct"})
-        else:
-            feedback.append({"status": "wrong", "correct": q["options"][correct_answer]})
+            user_answer = answers[i] if i < len(answers) else ""
+
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """
+You are a STRICT language grader.
+
+Rules:
+- Only give score 9-10 if meaning AND grammar are correct.
+- If meaning is wrong → score must be 0–3.
+- If partially correct → score 4–7.
+- If mostly correct with small grammar mistakes → score 8.
+- NEVER say correct if meaning is wrong.
+
+Return JSON:
+{
+  "score": number,
+  "feedback": "",
+  "correction": ""
+}
+"""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"""
+English sentence:
+{p['english']}
+
+Correct translation:
+{p['target']}
+
+User answer:
+{user_answer}
+"""
+                    }
+                ]
+            )
+
+            grade = json.loads(response.choices[0].message.content)
+            results.append(grade)
+
+        return jsonify({"results": results})
+
+    except Exception as e:
+        print("Grading error:", e)
+        return jsonify({"error": "grading failed"}), 500
 
     xp = correct
     leaderboard = load_language()
