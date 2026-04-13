@@ -11,12 +11,8 @@
 
 <div>
 
-<select id="language">
-<option>Spanish</option>
-<option>French</option>
-<option>German</option>
-<option>Japanese</option>
-</select>
+<!-- 🔥 NEW: text input instead of dropdown -->
+<input id="language" placeholder="Enter a language (e.g. Spanish, Korean, Italian)">
 
 <select id="difficulty">
 <option value="no-brainer">No-Brainer 😄</option>
@@ -42,7 +38,6 @@
 <br>
 
 <a href="/home"><button>🏠 Home</button></a>
-
 <a href="/leaderboard"><button>🏆 Leaderboard</button></a>
 
 <script>
@@ -51,8 +46,14 @@ let questions = []
 
 async function startGame(){
 
-const language = document.getElementById("language").value
+const language = document.getElementById("language").value.trim()
 const difficulty = document.getElementById("difficulty").value
+
+// 🔴 Prevent empty input
+if(!language){
+alert("Please enter a language")
+return
+}
 
 const res = await fetch("/start_language",{
 method:"POST",
@@ -64,6 +65,7 @@ if(!res.ok){
 alert("Failed to start game")
 return
 }
+
 const data = await res.json()
 
 questions = data.questions
