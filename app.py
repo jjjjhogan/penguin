@@ -115,7 +115,30 @@ def start_language():
 
     return jsonify(questions_json)
 
+@app.route("/submit_language", methods=["POST"])
+def submit_language():
+
+    if "questions" not in session:
+        return jsonify({"error": "no questions"}), 400
+
+    data = request.get_json()
+    answers = data.get("answers", [])
+
+    questions = session["questions"]
+
+    correct = 0
     feedback = []
+
+    for i, q in enumerate(questions):
+
+        user = answers[i] if i < len(answers) else -1
+        correct_answer = q["answer"]
+
+        if user == correct_answer:
+            correct += 1
+            feedback.append({"status": "correct"})
+        else:
+            feedback.append({"status": "wrong", "correct": q["options"][correct_answer]})
 
 
     xp = correct

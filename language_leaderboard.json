@@ -2,5 +2,9 @@
   "john": {
     "xp": 8,
     "level": 2
+  },
+  "jack": {
+    "xp": 5,
+    "level": 1
   }
 }
