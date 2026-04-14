@@ -177,7 +177,7 @@ def start_conversation():
         return jsonify({"error": "not logged in"}), 401
 
     data = request.get_json()
-    language = data.get("language")
+    language = data.get("language").strip()
     difficulty = data.get("difficulty")
 
     # difficulty control
