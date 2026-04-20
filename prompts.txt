@@ -1,0 +1,2 @@
+We want to overhaul the level up system. Players level will be connected to their pet penguin. When you level up you will be able to get your penguin new outfits and colors. We will need a new page titled 'my penguin' where you can see your penguin, pet them, and talk with him (talking with him will tell you random fun language facts in different languages) The old language leaderboard will work basically the same but will need to be shifted slightly to also display a icon photo of their penguin next to their name on the leaderboard.
+
