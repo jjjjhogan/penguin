@@ -162,34 +162,34 @@ def submit_language():
 
 
     xp = correct
-   leaderboard = load_language()
+    leaderboard = load_language()
 
-user = session["username"]
+    user = session["username"]
 
-if user not in leaderboard:
-    leaderboard[user] = {
-        "score": 0,
-        "xp": 0,
-        "level": 1,
-        "penguin": {
-            "color": "black",
-            "outfit": "none"
+    if user not in leaderboard:
+        leaderboard[user] = {
+            "score": 0,
+            "xp": 0,
+            "level": 1,
+            "penguin": {
+                "color": "black",
+                "outfit": "none"
+            }
         }
-    }
 
-leaderboard[user]["score"] += correct
-leaderboard[user]["xp"] += correct
+    leaderboard[user]["score"] += correct
+    leaderboard[user]["xp"] += correct
 
-# LEVEL UP (20 xp per level)
-new_level = leaderboard[user]["xp"] // 20 + 1
-leaderboard[user]["level"] = new_level
+    # LEVEL UP (20 xp per level)
+    new_level = leaderboard[user]["xp"] // 20 + 1
+    leaderboard[user]["level"] = new_level
 
     save_language(leaderboard)
 
     return jsonify({
-        "correct": correct,
-        "xp": xp,
-        "feedback": feedback
+            "correct": correct,
+            "xp": xp,
+            "feedback": feedback
     })
 
 
