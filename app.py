@@ -14,22 +14,42 @@ client = OpenAI(api_key=os.getenv('api_key'))
 
 LANG_FILE = "language_leaderboard.json"
 
-
 def load_language():
     if not os.path.exists(LANG_FILE):
         return {}
-
-    try:
-        with open(LANG_FILE, "r") as f:
-            return json.load(f)
-    except:
-        return {}
-
+    with open(LANG_FILE, "r") as f:
+        return json.load(f)
 
 def save_language(data):
     with open(LANG_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+        json.dump(data, f, indent=4)
 
+@app.route("/penguin")
+def penguin():
+    if "username" not in session:
+        return redirect("/")
+
+    leaderboard = load_language()
+    user = leaderboard.get(session["username"])
+
+    return render_template("penguin.html", user=user)
+
+@app.route("/penguin_talk", methods=["POST"])
+def penguin_talk():
+
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "system",
+                "content": "Say a short fun language fact in a random language with translation."
+            }
+        ]
+    )
+
+    return jsonify({
+        "message": response.choices[0].message.content
+    })
 
 @app.route("/")
 def login():
@@ -142,19 +162,27 @@ def submit_language():
 
 
     xp = correct
-    leaderboard = load_language()
-    print('debug: ' +str(type(leaderboard)))
-    print(leaderboard)
-    username = session["username"]
+   leaderboard = load_language()
 
-    if username not in leaderboard:
-        leaderboard[username] = {"xp": 0, "level": 1}
+user = session["username"]
 
-    leaderboard[username]["xp"] += xp
+if user not in leaderboard:
+    leaderboard[user] = {
+        "score": 0,
+        "xp": 0,
+        "level": 1,
+        "penguin": {
+            "color": "black",
+            "outfit": "none"
+        }
+    }
 
-    while leaderboard[username]["xp"] >= 20:
-        leaderboard[username]["xp"] -= 20
-        leaderboard[username]["level"] += 1
+leaderboard[user]["score"] += correct
+leaderboard[user]["xp"] += correct
+
+# LEVEL UP (20 xp per level)
+new_level = leaderboard[user]["xp"] // 20 + 1
+leaderboard[user]["level"] = new_level
 
     save_language(leaderboard)
 

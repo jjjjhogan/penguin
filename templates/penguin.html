@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>My Penguin</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+
+<h1>🐧 My Penguin</h1>
+
+<div style="text-align:center;">
+
+<!-- simple penguin visual -->
+<div id="penguin" style="
+width:100px;
+height:100px;
+margin:auto;
+background: black;
+border-radius:50%;
+"></div>
+
+<p>Level: {{ user.level }}</p>
+
+</div>
+
+<br>
+
+<button onclick="pet()">🐧 Pet Penguin</button>
+<button onclick="talk()">💬 Talk</button>
+
+<p id="response"></p>
+
+<br>
+
+<a href="/home"><button>🏠 Home</button></a>
+
+<script>
+
+function pet(){
+document.getElementById("response").innerText = "Your penguin is happy! 🐧"
+}
+
+async function talk(){
+
+const res = await fetch("/penguin_talk",{method:"POST"})
+const data = await res.json()
+
+document.getElementById("response").innerText = data.message
+}
+
+</script>
+
+</body>
+</html>

@@ -42,7 +42,13 @@ async function loadLeaderboard(){
     let html = ""
 
     players.forEach(([user,stats])=>{
-        html += `<li><b>${user}</b> — Level ${stats.level} (${stats.xp} XP)</li>`
+        html += `
+<tr>
+<td>🐧</td>
+<td>${username}</td>
+<td>${data.score}</td>
+</tr>
+`
     })
 
     document.getElementById("leaderboard").innerHTML = html
