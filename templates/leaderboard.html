@@ -13,9 +13,7 @@
 
 <br>
 
-<a href="/home">
-<button>🏠 Home</button>
-</a>
+<a href="/home"><button>🏠 Home</button></a>
 
 <script>
 
@@ -31,7 +29,7 @@ async function loadLeaderboard(){
     const data = await res.json()
 
     const players = Object.entries(data)
-
+    console.log(players)
     players.sort((a,b)=>{
         if(b[1].level === a[1].level){
             return b[1].xp - a[1].xp
@@ -43,10 +41,13 @@ async function loadLeaderboard(){
 
     players.forEach(([user,stats])=>{
         html += `
+
 <tr>
 <td>🐧</td>
-<td>${username}</td>
-<td>${data.score}</td>
+<td>name: ${user}</td>
+<td>total score: ${stats.score}</td>
+<td>xp:${stats.xp}/20</td>
+<td>level:${stats.level}</td>
 </tr>
 `
     })
