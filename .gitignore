@@ -1,6 +1,6 @@
 key.py
 .env
 .vscode/
-.pycache
+__pycache__/
 .pyc
 **/__pycache__/
