@@ -37,21 +37,22 @@ async function loadLeaderboard(){
         return b[1].level - a[1].level
     })
 
-    let html = ""
+    let html = "<table><th>Avatar</th><th>Name</th><th>score</th><th>xp</th><th>level</th>"
 
     players.forEach(([user,stats])=>{
         html += `
 
 <tr>
 <td>🐧</td>
-<td>name: ${user}</td>
-<td>total score: ${stats.score}</td>
-<td>xp:${stats.xp}/20</td>
-<td>level:${stats.level}</td>
+<td> ${user}</td>
+<td>${stats.score}</td>
+<td>${stats.xp}/20</td>
+<td>${stats.level}</td>
 </tr>
 `
     })
-
+    html += '</table>'
+    console.log(html);
     document.getElementById("leaderboard").innerHTML = html
 }
 
