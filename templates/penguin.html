@@ -11,17 +11,30 @@
 
 <div style="text-align:center;">
 
-<!-- simple penguin visual -->
+<!-- Penguin -->
 <div id="penguin" style="
 width:100px;
 height:100px;
 margin:auto;
-background: black;
 border-radius:50%;
+background: {{ user.penguin.color }};
+transition: 0.3s;
 "></div>
 
 <p>Level: {{ user.level }}</p>
 
+</div>
+
+<br>
+
+<!-- 🎨 COLOR PICKER -->
+<div style="text-align:center;">
+<p>Choose your penguin color:</p>
+
+<input type="color" id="colorPicker" value="{{ user.penguin.color }}">
+<br><br>
+
+<button onclick="changeColor()">Apply Color</button>
 </div>
 
 <br>
@@ -47,6 +60,22 @@ const res = await fetch("/penguin_talk",{method:"POST"})
 const data = await res.json()
 
 document.getElementById("response").innerText = data.message
+}
+
+async function changeColor(){
+
+const color = document.getElementById("colorPicker").value
+
+// update visually instantly
+document.getElementById("penguin").style.background = color
+
+// save to server
+await fetch("/set_penguin_color",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({color})
+})
+
 }
 
 </script>

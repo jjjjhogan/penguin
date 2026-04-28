@@ -14,6 +14,29 @@ client = OpenAI(api_key=os.getenv('api_key'))
 
 LANG_FILE = "language_leaderboard.json"
 
+@app.route("/set_penguin_color", methods=["POST"])
+def set_penguin_color():
+
+    if "username" not in session:
+        return jsonify({"error": "not logged in"}), 401
+
+    data = request.get_json()
+    color = data.get("color")
+
+    leaderboard = load_language()
+
+    user = session["username"]
+
+    if user not in leaderboard:
+        return jsonify({"error": "user not found"}), 404
+
+    # update color
+    leaderboard[user]["penguin"]["color"] = color
+
+    save_language(leaderboard)
+
+    return jsonify({"success": True})
+
 def load_language():
     if not os.path.exists(LANG_FILE):
         return {}
@@ -172,7 +195,7 @@ def submit_language():
             "xp": 0,
             "level": 1,
             "penguin": {
-                "color": "black",
+                "color": "#000000",
                 "outfit": "none"
             }
         }
