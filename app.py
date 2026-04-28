@@ -87,6 +87,20 @@ def do_login():
         return redirect("/")
 
     session["username"] = username
+    leaderboard = load_language()
+
+
+    if username not in leaderboard:
+        leaderboard[username] = {
+            "score": 0,
+            "xp": 0,
+            "level": 1,
+            "penguin": {
+                "color": "#000000",
+                "outfit": "none"
+            }
+        }
+    save_language(leaderboard)
     return redirect("/home")
 
 
