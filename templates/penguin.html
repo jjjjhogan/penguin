@@ -12,15 +12,13 @@
 <div style="text-align:center;">
 
 <!-- Penguin -->
-<div id="penguin" style="
-width:100px;
-height:100px;
-margin:auto;
-border-radius:50%;
-background: {{ user.penguin.color }};
-transition: 0.3s;
-"></div>
-
+<div id="penguin" class="penguin">
+  <div class="body"></div>
+  <div class="belly"></div>
+  <div class="eye left"></div>
+  <div class="eye right"></div>
+  <div class="beak"></div>
+</div>
 <p>Level: {{ user.level }}</p>
 
 </div>
@@ -67,7 +65,7 @@ async function changeColor(){
 const color = document.getElementById("colorPicker").value
 
 // update visually instantly
-document.getElementById("penguin").style.background = color
+document.querySelector(".penguin .body").style.background = color
 
 // save to server
 await fetch("/set_penguin_color",{
@@ -77,6 +75,8 @@ body:JSON.stringify({color})
 })
 
 }
+
+document.querySelector(".penguin .body").style.background = "{{ user.penguin.color }}"
 
 </script>
 
