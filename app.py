@@ -218,9 +218,8 @@ def submit_language():
     leaderboard[user]["xp"] += correct
 
     # LEVEL UP (20 xp per level)
-    if(you have xp to level up):
-        change level to new level
-        take 20 xp away
+    if(leaderboard[user]["xp"]p >= 20):
+        xp -= 20
     leaderboard[user]["level"] = new_level
 
     save_language(leaderboard)
