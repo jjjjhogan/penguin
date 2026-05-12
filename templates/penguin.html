@@ -2,7 +2,9 @@
 <html>
 <head>
 <title>My Penguin</title>
+
 <link rel="stylesheet" href="/static/style.css">
+
 </head>
 
 <body>
@@ -11,72 +13,120 @@
 
 <div style="text-align:center;">
 
-<!-- Penguin -->
 <div id="penguin" class="penguin">
-  <div class="body"></div>
-  <div class="belly"></div>
-  <div class="eye left"></div>
-  <div class="eye right"></div>
-  <div class="beak"></div>
+
+<div class="body"></div>
+<div class="belly"></div>
+
+<div class="eye left"></div>
+<div class="eye right"></div>
+
+<div class="beak"></div>
+
 </div>
+
 <p>Level: {{ user.level }}</p>
 
 </div>
 
 <br>
 
-<!-- 🎨 COLOR PICKER -->
 <div style="text-align:center;">
-<p>Choose your penguin color:</p>
 
-<input type="color" id="colorPicker" value="{{ user.penguin.color }}">
+<p>Choose Penguin Color</p>
+
+<input
+type="color"
+id="colorPicker"
+value="{{ user.penguin_color }}"
+>
+
 <br><br>
 
-<button onclick="changeColor()">Apply Color</button>
+<button onclick="changeColor()">
+Apply Color
+</button>
+
 </div>
 
 <br>
 
-<button onclick="pet()">🐧 Pet Penguin</button>
-<button onclick="talk()">💬 Talk</button>
+<div style="text-align:center;">
+
+<button onclick="pet()">
+🐧 Pet Penguin
+</button>
+
+<button onclick="talk()">
+💬 Talk
+</button>
+
+</div>
 
 <p id="response"></p>
 
 <br>
 
-<a href="/home"><button>🏠 Home</button></a>
+<a href="/home">
+<button>🏠 Home</button>
+</a>
 
 <script>
 
+document.querySelector(
+".penguin .body"
+).style.background =
+"{{ user.penguin_color }}"
+
 function pet(){
-document.getElementById("response").innerText = "Your penguin is happy! 🐧"
+
+document.getElementById(
+"response"
+).innerText =
+"Your penguin is happy! 🐧"
+
 }
 
 async function talk(){
 
-const res = await fetch("/penguin_talk",{method:"POST"})
+const res = await fetch(
+"/penguin_talk",
+{
+method:"POST"
+}
+)
+
 const data = await res.json()
 
-document.getElementById("response").innerText = data.message
+document.getElementById(
+"response"
+).innerText = data.message
+
 }
 
 async function changeColor(){
 
-const color = document.getElementById("colorPicker").value
+const color =
+document.getElementById(
+"colorPicker"
+).value
 
-// update visually instantly
-document.querySelector(".penguin .body").style.background = color
+document.querySelector(
+".penguin .body"
+).style.background = color
 
-// save to server
-await fetch("/set_penguin_color",{
+await fetch(
+"/set_penguin_color",
+{
 method:"POST",
-headers:{"Content-Type":"application/json"},
+headers:{
+"Content-Type":"application/json"
+},
 body:JSON.stringify({color})
-})
+}
+)
 
 }
-
-document.querySelector(".penguin .body").style.background = "{{ user.penguin.color }}"df
 
 </script>
 
