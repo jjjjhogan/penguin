@@ -275,6 +275,11 @@ include English translation.
         response.choices[0].message.content
     })
 
+@app.route("/flappy")
+def flappy():
+    return render_template("flappy.html")
+
+
 # ================= RUN =================
 
 if __name__ == "__main__":
