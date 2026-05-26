@@ -63,9 +63,8 @@ def login_page():
 @app.route("/login_user", methods=["POST"])
 def login_user():
 
-    data = request.get_json()
-
-    username = data.get("username")
+    username = request.form["username"]
+    print(username)
 
     if not username:
         return jsonify({"error": "No username"}), 400
@@ -79,7 +78,7 @@ def login_user():
         db.session.add(user)
         db.session.commit()
 
-    return jsonify({"success": True})
+    return redirect("/home")
 
 @app.route("/logout")
 def logout():
