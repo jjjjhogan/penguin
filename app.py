@@ -275,6 +275,105 @@ include English translation.
         response.choices[0].message.content
     })
 
+def start_conversation():
+
+    if "username" not in session:
+        return jsonify({"error": "not logged in"}), 401
+
+    data = request.get_json()
+    language = data.get("language").strip()
+    difficulty = data.get("difficulty")
+
+    # difficulty control
+    if difficulty == "easy":
+        instruction = "short simple sentences"
+    elif difficulty == "medium":
+        instruction = "medium conversational sentences"
+    else:
+        instruction = "long detailed conversational sentences"
+
+    try:
+
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            response_format={"type": "json_object"},
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Return JSON: {prompts:[{english:'', target:''}]}"
+                },
+                {
+                    "role": "user",
+                    "content": f"Create 5 {instruction} translating English into {language}."
+                }
+            ]
+        )
+
+        prompts = json.loads(response.choices[0].message.content)
+
+        session["conversation"] = prompts["prompts"]
+
+        return jsonify(prompts)
+
+    except Exception as e:
+        print("Conversation error:", e)
+        return jsonify({"error": "AI failed"}), 500
+
+@app.route("/submit_conversation", methods=["POST"])
+def submit_conversation():
+
+    if "conversation" not in session:
+        return jsonify({"error": "no prompts"}), 400
+
+    data = request.get_json()
+    answers = data.get("answers", [])
+
+    prompts = session["conversation"]
+
+    results = []
+
+    try:
+
+        for i, p in enumerate(prompts):
+
+            user_answer = answers[i] if i < len(answers) else ""
+
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Grade from 0-10. Return JSON: {score: number, feedback: '', correction: ''}"
+                    },
+                    {
+                        "role": "user",
+                        "content": f"""
+English: {p['english']}
+Correct: {p['target']}
+User: {user_answer}
+"""
+                    }
+                ]
+            )
+
+            grade = json.loads(response.choices[0].message.content)
+            results.append(grade)
+
+        return jsonify({"results": results})
+
+    except Exception as e:
+        print("Grading error:", e)
+        return jsonify({"error": "grading failed"}), 500
+
+
+@app.route("/conversation")
+def conversation():
+    if "username" not in session:
+        return redirect("/")
+    return render_template("conversation.html")
+
+
 @app.route("/flappy")
 def flappy():
     return render_template("flappy.html")
