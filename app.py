@@ -204,21 +204,21 @@ def leaderboard():
 @app.route("/leaderboard_data")
 def leaderboard_data():
 
-    users = User.query.order_by(User.score.desc()).all()
+    users = User.query.order_by(
+        User.level.desc(),
+        User.xp.desc()
+    ).all()
 
-    results = []
-
-    for u in users:
-
-        results.append({
+    return jsonify([
+        {
             "username": u.username,
             "score": u.score,
+            "xp": u.xp,
             "level": u.level,
             "penguin_color": u.penguin_color
-        })
-
-    return jsonify(results)
-
+        }
+        for u in users
+    ])
 # ================= PENGUIN =================
 
 @app.route("/penguin")

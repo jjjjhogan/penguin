@@ -1,62 +1,174 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Leaderboard</title>
-<link rel="stylesheet" href="/static/style.css">
+    <title>Penguin Leaderboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        table {
+            margin: auto;
+            border-collapse: collapse;
+            min-width: 700px;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #f0f8ff;
+        }
+
+        .penguin-icon {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 2px solid black;
+        }
+
+        #leaderboardContainer {
+            display: flex;
+            justify-content: center;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .buttons button {
+            margin: 5px;
+        }
+    </style>
 </head>
 
 <body>
 
 <h1>🏆 Penguin Leaderboard</h1>
 
-<ul id="leaderboard"></ul>
+<div id="leaderboardContainer">
 
-<br>
+    <table id="leaderboardTable">
 
-<a href="/home"><button>🏠 Home</button></a>
+        <thead>
+            <tr>
+                <th>Penguin</th>
+                <th>Username</th>
+                <th>Score</th>
+                <th>XP</th>
+                <th>Level</th>
+            </tr>
+        </thead>
+
+        <tbody id="leaderboardBody">
+
+            <tr>
+                <td colspan="5">Loading...</td>
+            </tr>
+
+        </tbody>
+
+    </table>
+
+</div>
+
+<div class="buttons">
+
+    <a href="/home">
+        <button>🏠 Home</button>
+    </a>
+
+    <a href="/penguin">
+        <button>🐧 My Penguin</button>
+    </a>
+
+</div>
 
 <script>
 
-async function loadLeaderboard(){
+async function loadLeaderboard() {
 
-    const res = await fetch("/language_leaderboard")
+    try {
 
-    if(!res.ok){
-        console.error("Failed to load leaderboard")
-        return
-    }
+        const res = await fetch("/leaderboard_data");
 
-    const data = await res.json()
-
-    const players = Object.entries(data)
-    console.log(players)
-    players.sort((a,b)=>{
-        if(b[1].level === a[1].level){
-            return b[1].xp - a[1].xp
+        if (!res.ok) {
+            throw new Error("Failed to load leaderboard");
         }
-        return b[1].level - a[1].level
-    })
 
-    let html = "<table><th>Avatar</th><th>Name</th><th>score</th><th>xp</th><th>level</th>"
+        const players = await res.json();
 
-    players.forEach(([user,stats])=>{
-        html += `
+        players.sort((a, b) => {
 
-<tr>
-<td>🐧</td>
-<td> ${user}</td>
-<td>${stats.score}</td>
-<td>${stats.xp}/20</td>
-<td>${stats.level}</td>
-</tr>
-`
-    })
-    html += '</table>'
-    console.log(html);
-    document.getElementById("leaderboard").innerHTML = html
+            if (b.level === a.level) {
+                return b.xp - a.xp;
+            }
+
+            return b.level - a.level;
+        });
+
+        let html = "";
+
+        players.forEach(player => {
+
+            html += `
+            <tr>
+
+                <td>
+                    <div
+                        class="penguin-icon"
+                        style="background:${player.penguin_color || '#000000'};">
+                    </div>
+                </td>
+
+                <td>${player.username}</td>
+
+                <td>${player.score}</td>
+
+                <td>${player.xp}</td>
+
+                <td>${player.level}</td>
+
+            </tr>
+            `;
+        });
+
+        if (players.length === 0) {
+
+            html = `
+            <tr>
+                <td colspan="5">
+                    No players yet.
+                </td>
+            </tr>
+            `;
+        }
+
+        document.getElementById("leaderboardBody").innerHTML = html;
+
+    }
+    catch (err) {
+
+        console.error(err);
+
+        document.getElementById("leaderboardBody").innerHTML = `
+        <tr>
+            <td colspan="5">
+                Failed to load leaderboard.
+            </td>
+        </tr>
+        `;
+    }
 }
 
-loadLeaderboard()
+loadLeaderboard();
 
 </script>
 
