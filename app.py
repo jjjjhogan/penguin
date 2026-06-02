@@ -275,6 +275,7 @@ include English translation.
         response.choices[0].message.content
     })
 
+@app.route("/start_conversation", methods=["POST"])
 def start_conversation():
 
     if "username" not in session:
@@ -299,9 +300,20 @@ def start_conversation():
             response_format={"type": "json_object"},
             messages=[
                 {
-                    "role": "system",
-                    "content": "Return JSON: {prompts:[{english:'', target:''}]}"
-                },
+                "role": "system",
+                "content": """
+            Return ONLY valid JSON:
+
+            {
+            "prompts":[
+                {
+                "english":"",
+                "target":""
+                }
+            ]
+            }
+            """
+            },
                 {
                     "role": "user",
                     "content": f"Create 5 {instruction} translating English into {language}."
@@ -321,6 +333,108 @@ def start_conversation():
 
 @app.route("/submit_conversation", methods=["POST"])
 def submit_conversation():
+
+    if "conversation" not in session:
+        return jsonify({"error": "no prompts"}), 400
+
+    data = request.get_json()
+    answers = data.get("answers", [])
+
+    prompts = session["conversation"]
+
+    results = []
+    xp_gained = 0
+
+    try:
+
+        for i, p in enumerate(prompts):
+
+            user_answer = answers[i] if i < len(answers) else ""
+
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={"type": "json_object"},
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """
+You are a strict language teacher.
+
+Compare the user's translation against the correct translation.
+
+Rules:
+
+- Give 10 only if meaning is completely correct.
+- Give 7-9 if only minor grammar mistakes exist.
+- Give 4-6 if important mistakes exist.
+- Give 1-3 if most of the sentence is incorrect.
+- Give 0 if blank, unrelated, or English.
+
+Return ONLY:
+
+{
+  "score": 0,
+  "correct": false,
+  "feedback": "",
+  "correction": ""
+}
+"""
+                    },
+                    {
+                        "role": "user",
+                        "content": f"""
+Original English:
+{p['english']}
+
+Expected Translation:
+{p['target']}
+
+Student Translation:
+{user_answer}
+
+Determine if the student's translation accurately conveys the meaning.
+"""
+                    }
+                ]
+            )
+
+            grade = json.loads(
+                response.choices[0].message.content
+            )
+
+            results.append({
+                "score": grade["score"],
+                "correct": grade["score"] >= 8,
+                "feedback": grade["feedback"],
+                "correction": grade["correction"]
+            })
+
+            if grade["score"] >= 8:
+                xp_gained += 2
+
+        user = User.query.filter_by(
+            username=session["username"]
+        ).first()
+
+        user.xp += xp_gained
+        user.level = user.xp // 20 + 1
+
+        db.session.commit()
+
+        return jsonify({
+            "results": results,
+            "xp_gained": xp_gained,
+            "xp": user.xp,
+            "level": user.level
+        })
+
+    except Exception as e:
+
+        print("Grading error:", e)
+
+        return jsonify({
+            "error": "grading failed"
+        }), 500
 
     if "conversation" not in session:
         return jsonify({"error": "no prompts"}), 400
