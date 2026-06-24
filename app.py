@@ -370,7 +370,7 @@ Rules:
 - Give 1-3 if most of the sentence is incorrect.
 - Give 0 if blank, unrelated, or English.
 
-Return ONLY:
+Return JSON ONLY:
 
 {
   "score": 0,
