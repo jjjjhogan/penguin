@@ -436,49 +436,6 @@ Determine if the student's translation accurately conveys the meaning.
             "error": "grading failed"
         }), 500
 
-    if "conversation" not in session:
-        return jsonify({"error": "no prompts"}), 400
-
-    data = request.get_json()
-    answers = data.get("answers", [])
-
-    prompts = session["conversation"]
-
-    results = []
-
-    try:
-
-        for i, p in enumerate(prompts):
-
-            user_answer = answers[i] if i < len(answers) else ""
-
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                response_format={"type": "json_object"},
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Grade from 0-10. Return JSON: {score: number, feedback: '', correction: ''}"
-                    },
-                    {
-                        "role": "user",
-                        "content": f"""
-English: {p['english']}
-Correct: {p['target']}
-User: {user_answer}
-"""
-                    }
-                ]
-            )
-
-            grade = json.loads(response.choices[0].message.content)
-            results.append(grade)
-
-        return jsonify({"results": results})
-
-    except Exception as e:
-        print("Grading error:", e)
-        return jsonify({"error": "grading failed"}), 500
 
 
 @app.route("/conversation")
